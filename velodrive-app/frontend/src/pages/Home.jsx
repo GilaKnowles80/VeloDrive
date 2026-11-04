@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Link } from 'react-router-dom';
 import { Car, Wallet, Users } from 'lucide-react';
 import logo from '../assets/logo.svg';
@@ -7,10 +7,10 @@ const Home = () => (
   <div className="min-h-screen bg-gray-50">
     <section className="bg-blue-900 text-white py-20 px-4">
       <div className="max-w-7xl mx-auto text-center">
-        <img src={logo} alt="VeloDrive Logo" className="w-16 h-16 mx-auto mb-6" />
-        <h1 className="text-4xl md:text-6xl font-bold mb-6">Velo<span className="text-blue-600">lo</span>Drive</h1>
-        <p className="text-xl md:text-2xl text-blue-100 mb-8">
-          All Vehicle Rental Marketplace — From motorcycle to crane, we've got you covered.
+        <img src={logo} alt="VeloDrive Logo" className="w-20 h-20 mx-auto mb-6" />
+        <h1 className="text-4xl md:text-6xl font-bold mb-6">Velo<span className="text-blue-600">Drive</span></h1>
+        <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-2xl mx-auto leading-relaxed">
+          VeloDrive: A peer-to-peer (P2P) vehicle rental and ride-hailing hybrid marketplace. It supports both self-drive arrangements and hire-a-driver services, operating on transactional commission or subscription-based monetization logic.
         </p>
         <div className="flex flex-col md:flex-row gap-4 justify-center">
           <Link to="/register" className="btn-primary px-8 py-3 text-lg">Become an Owner</Link>
@@ -67,18 +67,10 @@ const Home = () => (
         <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Platform Fees</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
           <div className="card p-8">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Vehicle Owner</h3>
-            <p className="text-gray-600 mb-4">Php 1,000/month subscription + 10% commission per booking.</p>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-800">E-wallet connected to bank account. Withdrawable. Admin handles refunds.</p>
-            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Vehicle Owner Membership</h3>\n            <p className="text-gray-600 mb-4">Php 2,500/year one-time subscription fee. Charged once per year when you register as a vehicle owner, regardless of how many vehicles you own.</p>\n            <div className="bg-blue-50 p-4 rounded-lg">\n              <p className="text-sm text-blue-800">Paid via PayPal QR Code, PayPal Payment Link, or PayPal Subscription.</p>\n            </div>
           </div>
           <div className="card p-8">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Renter</h3>
-            <p className="text-gray-600 mb-4">Pays for fuel, vehicle damages, and additional per-hour charges for delayed returns.</p>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-800">GPS tracking visible on Admin & Owner dashboards via Google Maps / Waze.</p>
-            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Service Charge per Booking</h3>\n            <p className="text-gray-600 mb-4">Php 250 flat service charge deducted from each rental payment. Paid via PayPal wallet, QR code, or payment link.</p>\n            <div className="bg-green-50 p-4 rounded-lg">\n              <p className="text-sm text-green-800">Owner receives: Rental amount − Php 250 service charge. Admin receives: Php 250 service charge.</p>\n            </div>
           </div>
         </div>
       </div>
