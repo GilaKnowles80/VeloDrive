@@ -13,8 +13,8 @@ const Home = () => (
           VeloDrive: A peer-to-peer (P2P) vehicle rental and ride-hailing hybrid marketplace. It supports both self-drive arrangements and hire-a-driver services, operating on transactional commission or subscription-based monetization logic.
         </p>
         <div className="flex flex-col md:flex-row gap-4 justify-center">
-          <Link to="/register" className="btn-primary px-8 py-3 text-lg">Become an Owner</Link>
-          <Link to="/register" className="bg-blue-800 hover:bg-blue-700 text-white px-8 py-3 text-lg rounded-lg border border-blue-500 transition">Find a Vehicle to Rent</Link>
+          <Link to="/register?role=owner" className="btn-primary px-8 py-3 text-lg">Vehicles Owner</Link>
+          <Link to="/register?role=renter" className="bg-blue-800 hover:bg-blue-700 text-white px-8 py-3 text-lg rounded-lg border border-blue-500 transition">Renter Sign Up</Link>
         </div>
       </div>
     </section>
@@ -79,3 +79,4 @@ const Home = () => (
 );
 
 export default Home;
+
