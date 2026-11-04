@@ -1,0 +1,9 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="60" cy="60" r="56" fill="#0f172a" stroke="#0ea5e9" stroke-width="4"/>
+  <circle cx="60" cy="60" r="52" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="4,4"/>
+  <path d="M30 60 L90 60 M60 30 L60 90" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="60" y="38" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">VEO</text>
+  <text x="60" y="58" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">DRIVE</text>
+  <rect x="42" y="72" width="36" height="14" fill="#0ea5e9" rx="4"/>
+  <text x="60" y="83" font-family="Arial, sans-serif" font-size="10" fill="white" text-anchor="middle">RENTALS</text>
+</svg>

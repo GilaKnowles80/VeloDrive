@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "buildCommand": "npm install",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/src/server.js" },
+    { "src": "/(.*)", "dest": "/src/server.js" }
+  ]
+}
