@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Home from './pages/Home';
@@ -91,6 +92,7 @@ function App() {
           <Route path="/booking-success/:id" element={<BookingSuccess />} />
           <Route path="/booking-cancel/:id" element={<BookingCancel />} />
         </Routes>
+        <Footer />
       </BrowserRouter>
     </AuthProvider>
   );
