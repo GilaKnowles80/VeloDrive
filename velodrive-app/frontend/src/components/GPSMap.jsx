@@ -8,12 +8,16 @@ import 'leaflet/dist/images/marker-shadow.png';
 import api from '../utils/api';
 
 // Safely configure Leaflet default icon (guard against undefined icon.Default)
-if (L.Icon.Default) {
-  L.Icon.Default.merge({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
-  });
+try {
+  if (L.Icon.Default && typeof L.Icon.Default.merge === 'function') {
+    L.Icon.Default.merge({
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+    });
+  }
+} catch (e) {
+  console.warn('Leaflet icon configuration failed:', e.message);
 }
 
 const FitBounds = ({ markers }) => {
