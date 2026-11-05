@@ -22,7 +22,9 @@ const VehicleTypesFilter = () => {
       fetch(`/api/vehicles?type=${encodeURIComponent(selectedCategory)}`)
         .then(res => res.json())
         .then(data => {
-          setVehicles(data);
+          // Handle both array responses or wrapped success data objects
+          const results = Array.isArray(data) ? data : (data.vehicles || data.data || []);
+          setVehicles(results);
           setLoading(false);
         })
         .catch(err => {
@@ -43,7 +45,7 @@ const VehicleTypesFilter = () => {
         Supported Vehicle Types
       </h2>
 
-      {/* Grid of Clickable Category Cards */}
+      {/* Grid of Clickable Category Cards with onClick Handlers */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {vehicleCategories.map((category) => (
           <button
@@ -61,12 +63,12 @@ const VehicleTypesFilter = () => {
         ))}
       </div>
 
-      {/* Selected Category Vehicle Listings Section */}
+      {/* Selected Category Vehicle Listings & Ads Campaign Section */}
       {selectedCategory && (
         <div className="mt-12 bg-slate-50 p-6 rounded-2xl border border-slate-200">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold text-slate-900">
-              Available Listings for: <span className="text-sky-600">{selectedCategory}</span>
+              Available Listings & Ads for: <span className="text-sky-600">{selectedCategory}</span>
             </h3>
             <button 
               onClick={() => setSelectedCategory(null)}
@@ -81,14 +83,14 @@ const VehicleTypesFilter = () => {
           ) : vehicles.length === 0 ? (
             <div className="text-center py-8 bg-white rounded-xl border border-dashed border-slate-300">
               <p className="text-slate-600 font-medium">No sample ads uploaded for {selectedCategory} yet.</p>
-              <p className="text-xs text-slate-400 mt-1">Vehicle owners can upload listings from their dashboard.</p>
+              <p className="text-xs text-slate-400 mt-1">Vehicle owners can upload listings and ad campaigns from their dashboard.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {vehicles.map((vehicle) => (
                 <div key={vehicle._id || vehicle.id} className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm flex flex-col">
                   <img 
-                    src={vehicle.imageUrl || vehicle.adCampaignImage || "/placeholder.jpg"} 
+                    src={vehicle.imageUrl || vehicle.adCampaignImage || vehicle.image || "/placeholder.jpg"} 
                     alt={vehicle.title || vehicle.model} 
                     className="w-full h-48 object-cover"
                   />
@@ -96,7 +98,7 @@ const VehicleTypesFilter = () => {
                     <h4 className="font-bold text-slate-900 text-lg">{vehicle.title || vehicle.model}</h4>
                     <p className="text-xs text-slate-500 mt-1 flex-grow">{vehicle.description}</p>
                     <div className="mt-4 flex items-center justify-between">
-                      <span className="text-sky-600 font-extrabold">₱{vehicle.pricePerDay} / day</span>
+                      <span className="text-sky-600 font-extrabold">₱{vehicle.pricePerDay || vehicle.price} / day</span>
                       <button 
                         onClick={() => handleCheckout(vehicle)}
                         className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg transition shadow cursor-pointer"

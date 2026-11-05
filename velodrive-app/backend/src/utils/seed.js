@@ -4,7 +4,7 @@ const { User, Wallet } = require('../models');
 const seedAdmin = async () => {
   try {
     const adminEmail = process.env.ADMIN_EMAIL || 'gctravelandtours2021@gmail.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123456';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'CathyGilaArda$2011';
 
     let admin = await User.findOne({ where: { email: adminEmail } });
     if (admin) {
@@ -17,11 +17,11 @@ const seedAdmin = async () => {
 
     admin = await User.create({
       role: 'admin',
-      firstName: 'VeloDrive',
-      lastName: 'Admin',
-      email: adminEmail,
+      firstName: 'Gila',
+      lastName: 'Knowles',
+      email: 'gctravelandtours2021@gmail.com',
       password: hashedPassword,
-      phone: '+639000000000',
+      phone: '+639154401150',
       address: 'VeloDrive Headquarters, Metro Manila, Philippines',
       gdprConsent: true,
       gdprConsentDate: new Date()
