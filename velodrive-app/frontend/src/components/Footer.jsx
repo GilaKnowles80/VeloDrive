@@ -1,4 +1,5 @@
 import React from 'react';
+import logo from '../assets/logo.svg';
 
 const Footer = () => {
   return (
@@ -6,7 +7,7 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
           <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="VeloDrive Logo" className="w-10 h-10" />
+            <img src={logo} alt="VeloDrive Logo" className="w-10 h-10 object-contain" />
             <span className="text-2xl font-bold tracking-tight">
               Ve<span className="text-blue-400">lo</span>Drive
             </span>
@@ -20,7 +21,7 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-400">
               <span>Powered by</span>
-              <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_114x33.jpg" alt="PayPal" className="w-24 h-8" />
+              <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_114x33.jpg" alt="PayPal" className="w-24 h-8 object-contain" />
             </div>
             <div className="flex gap-4 text-sm text-gray-400">
               <a href="/privacy" className="hover:text-blue-400 transition">Privacy Policy</a>

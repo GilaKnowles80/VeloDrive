@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, User, Wallet, LogOut, Search,
-  CreditCard, LogIn, UserPlus
+  CreditCard, LogIn, UserPlus, ShieldAlert
 } from 'lucide-react';
 import logo from '../assets/logo.svg';
 
@@ -37,7 +37,7 @@ const Navbar = () => {
                 <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-blue-600 flex items-center gap-2">
                   <LogIn className="w-4 h-4" /> Login
                 </Link>
-                <Link to="/register" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-lg transition">
+                <Link to="/register" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-lg transition flex items-center gap-2">
                   <UserPlus className="w-4 h-4" /> Sign Up
                 </Link>
               </div>
@@ -46,11 +46,13 @@ const Navbar = () => {
             {user && (
               <>
                 <div className="hidden md:flex items-center gap-6 text-sm">
+                  {/* Admin Dashboard Link */}
                   {isAdmin && (
-                    <Link to="/admin/dashboard" className="text-gray-600 hover:text-blue-600 flex items-center gap-2">
-                      <LayoutDashboard className="w-4 h-4" /> Admin
+                    <Link to="/admin/dashboard" className="text-gray-600 hover:text-blue-600 flex items-center gap-2 font-semibold">
+                      <ShieldAlert className="w-4 h-4 text-blue-600" /> Admin Dashboard
                     </Link>
                   )}
+
                   {isOwner && (
                     <>
                       <Link to="/owner/dashboard" className="text-gray-600 hover:text-blue-600 flex items-center gap-2">
@@ -61,21 +63,25 @@ const Navbar = () => {
                       </Link>
                     </>
                   )}
+
                   {isRenter && (
                     <Link to="/renter/dashboard" className="text-gray-600 hover:text-blue-600 flex items-center gap-2">
                       <LayoutDashboard className="w-4 h-4" /> Renter Dashboard
                     </Link>
                   )}
+
                   <Link to="/wallet" className="text-gray-600 hover:text-blue-600 flex items-center gap-2">
                     <Wallet className="w-4 h-4" /> Wallet
                   </Link>
                 </div>
 
                 <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                  <span className="text-sm text-gray-600 hidden md:block">{user.firstName} {user.lastName}</span>
+                  <span className="text-sm text-gray-600 hidden md:block">
+                    {user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.name || user.email}
+                  </span>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
+                    className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700 cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" /> Logout
                   </button>
