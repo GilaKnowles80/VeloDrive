@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, User, Wallet, LogOut, Search,
-  CreditCard, Login, UserPlus
+  CreditCard, LogIn, UserPlus
 } from 'lucide-react';
 import logo from '../assets/logo.svg';
 
@@ -35,7 +35,7 @@ const Navbar = () => {
             {!user && (
               <div className="flex items-center gap-2">
                 <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-blue-600 flex items-center gap-2">
-                  <Login className="w-4 h-4" /> Login
+                  <LogIn className="w-4 h-4" /> Login
                 </Link>
                 <Link to="/register" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-lg transition">
                   <UserPlus className="w-4 h-4" /> Sign Up
