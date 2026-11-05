@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, RefreshToken, GDPRConsent } = require('../models');
-const { logGDPRConsent } = require('../middleware/gdpr');
+const { User, RefreshToken, GDPRConsent, Wallet } = require('../models');
+const { sendOTPEmail } = require('../services/emailService');
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '15m' });
@@ -29,6 +29,10 @@ const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Generate 6-digit OTP and 10-minute expiry time
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
     const user = await User.create({
       role,
       firstName,
@@ -38,11 +42,13 @@ const register = async (req, res) => {
       phone,
       address,
       gdprConsent: gdprConsent === true,
-      gdprConsentDate: gdprConsent === true ? new Date() : null
+      gdprConsentDate: gdprConsent === true ? new Date() : null,
+      otpCode,
+      otpExpires,
+      isVerified: false
     });
 
     // Create wallet
-    const { Wallet } = require('../models');
     await Wallet.create({ userId: user.id, balance: 0.00 });
 
     // Log GDPR consent
@@ -58,6 +64,50 @@ const register = async (req, res) => {
       });
     }
 
+    // Send OTP email
+    await sendOTPEmail(email, otpCode);
+
+    const userResponse = user.toJSON();
+    delete userResponse.password;
+    delete userResponse.otpCode;
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful. Please verify your email with the OTP sent.',
+      user: userResponse
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP code are required' });
+    }
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: 'Account is already verified' });
+    }
+
+    if (!user.otpCode || user.otpCode !== otp.toString().trim() || new Date() > new Date(user.otpExpires)) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code' });
+    }
+
+    // Mark user as verified and clear OTP fields
+    user.isVerified = true;
+    user.otpCode = null;
+    user.otpExpires = null;
+    await user.save();
+
     const tokens = generateTokens(user.id);
     await RefreshToken.create({
       userId: user.id,
@@ -68,9 +118,9 @@ const register = async (req, res) => {
     const userResponse = user.toJSON();
     delete userResponse.password;
 
-    res.status(201).json({
+    res.json({
       success: true,
-      message: 'Registration successful',
+      message: 'Account verified successfully!',
       user: userResponse,
       tokens
     });
@@ -90,6 +140,10 @@ const login = async (req, res) => {
 
     if (user.dataDeletedAt) {
       return res.status(403).json({ success: false, message: 'Account data has been erased' });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ success: false, message: 'Please verify your email address using the OTP code before logging in.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -157,4 +211,4 @@ const getMe = async (req, res) => {
   res.json({ success: true, user: req.user });
 };
 
-module.exports = { register, login, refreshToken, logout, getMe };
+module.exports = { register, verifyOTP, login, refreshToken, logout, getMe };

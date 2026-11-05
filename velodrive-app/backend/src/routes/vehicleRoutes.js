@@ -8,6 +8,10 @@ const {
 } = require('../controllers/vehicleController');
 const { upload } = require('../middleware/upload');
 
+// PUBLIC ROUTE: Allow everyone (including unauthenticated homepage visitors) to browse and filter vehicles
+router.get('/', getAllVehicles);
+
+// PROTECTED ROUTES: Require authentication/owner authorization
 router.post('/', protect, authorize('owner'), upload.fields([
   { name: 'certificateOfRegistration', maxCount: 1 },
   { name: 'proofOfOwnership', maxCount: 1 },
@@ -17,7 +21,6 @@ router.post('/', protect, authorize('owner'), upload.fields([
 ]), createVehicle);
 
 router.get('/my-vehicles', protect, authorize('owner'), getOwnerVehicles);
-router.get('/', protect, getAllVehicles);
 router.get('/:id', protect, getVehicleById);
 router.put('/:id', protect, updateVehicle);
 router.post('/:vehicleId/gps', protect, updateGPSLocation);
