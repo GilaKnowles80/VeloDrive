@@ -1,9 +1,181 @@
-<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="60" cy="60" r="56" fill="#0f172a" stroke="#0ea5e9" stroke-width="4"/>
-  <circle cx="60" cy="60" r="52" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="4,4"/>
-  <path d="M30 60 L90 60 M60 30 L60 90" stroke="#0ea5e9" stroke-width="2"/>
-  <text x="60" y="38" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">VEO</text>
-  <text x="60" y="58" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">DRIVE</text>
-  <rect x="42" y="72" width="36" height="14" fill="#0ea5e9" rx="4"/>
-  <text x="60" y="83" font-family="Arial, sans-serif" font-size="10" fill="white" text-anchor="middle">RENTALS</text>
-</svg>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeloDrive Logo Editor Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-200 min-h-screen flex items-center justify-center p-6 font-sans">
+
+    <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-100 p-6 rounded-xl shadow-2xl border border-slate-300">
+        
+        <!-- Left Panel: Text & Layout Controls -->
+        <div class="space-y-4 bg-slate-100 p-2">
+            
+            <!-- 1. Curved Main Header -->
+            <div class="bg-slate-50 p-4 rounded-lg border border-slate-300 shadow-sm space-y-2">
+                <div class="flex justify-between items-center text-xs font-bold text-slate-800 uppercase">
+                    <span>1. Curved Main Header</span>
+                    <span class="text-slate-500 text-[10px] bg-slate-200 px-2 py-0.5 rounded border border-slate-300">Curved Text Path ▾</span>
+                </div>
+                <div class="text-xs text-slate-600 flex items-center justify-between">
+                    <span>Arc Angle</span>
+                    <div class="flex items-center gap-2">
+                        <input type="range" min="0" max="100" value="50" class="w-28 accent-sky-600">
+                    </div>
+                </div>
+                <input 
+                    type="text" 
+                    id="mainHeaderInput" 
+                    value="VELODRIVE" 
+                    oninput="updatePreview()"
+                    class="w-full px-3 py-2 bg-white border border-slate-300 rounded text-slate-900 font-black tracking-widest text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none shadow-inner"
+                />
+            </div>
+
+            <!-- 2. Curved Sub-Header (Reverse Arc) -->
+            <div class="bg-slate-50 p-4 rounded-lg border border-slate-300 shadow-sm space-y-2">
+                <div class="flex justify-between items-center text-xs font-bold text-slate-800 uppercase">
+                    <span>2. Curved Sub-Header (Reverse Arc)</span>
+                    <label class="flex items-center gap-1 text-[11px] font-normal normal-case text-slate-700">
+                        <input type="checkbox" checked class="accent-sky-600"> Reverse Arching
+                    </label>
+                </div>
+                <div class="text-xs text-slate-600 flex items-center justify-between">
+                    <span>Reverse Arching</span>
+                    <input type="range" min="0" max="100" value="40" class="w-28 accent-sky-600">
+                </div>
+                <input 
+                    type="text" 
+                    id="subHeaderInput" 
+                    value="by ArGie-C Travel and Tours Agency" 
+                    oninput="updatePreview()"
+                    class="w-full px-3 py-2 bg-white border border-slate-300 rounded text-slate-800 italic text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none shadow-inner"
+                />
+            </div>
+
+            <!-- 3. Bottom Motto (Right-Aligned) -->
+            <div class="bg-slate-50 p-4 rounded-lg border border-slate-300 shadow-sm space-y-2">
+                <div class="text-xs font-bold text-slate-800 uppercase">3. Bottom Motto (Right-Aligned)</div>
+                <input 
+                    type="text" 
+                    id="mottoInput" 
+                    value="EXPLORE | ADVENTURE | DISCOVER" 
+                    oninput="updatePreview()"
+                    class="w-full px-3 py-2 bg-white border border-slate-300 rounded text-slate-900 font-bold tracking-wider text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none shadow-inner"
+                />
+            </div>
+
+            <!-- 4. Typography Toolbar -->
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-300 shadow-sm space-y-2">
+                <div class="text-xs font-bold text-slate-800 uppercase">4. Typography Toolbar</div>
+                <div class="grid grid-cols-4 gap-1.5 text-[11px]">
+                    <div>
+                        <label class="block text-[9px] font-bold text-slate-500 mb-0.5">Font Selector</label>
+                        <select class="w-full p-1 bg-white border border-slate-300 rounded text-[10px]">
+                            <option>Font Selector</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-slate-500 mb-0.5">Text Weight</label>
+                        <select class="w-full p-1 bg-white border border-slate-300 rounded text-[10px]">
+                            <option>Medium</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-slate-500 mb-0.5">Leading</label>
+                        <input type="text" value="235" class="w-full p-1 bg-white border border-slate-300 rounded text-[10px] text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-slate-500 mb-0.5">Kerning</label>
+                        <input type="text" value="0.0" class="w-full p-1 bg-white border border-slate-300 rounded text-[10px] text-center">
+                    </div>
+                </div>
+                <div class="flex items-center gap-1 pt-1">
+                    <span class="text-[10px] font-bold text-slate-500 pr-1">Formatting Tools:</span>
+                    <button class="px-2 py-0.5 bg-white border border-slate-300 rounded text-[10px] font-bold shadow-sm">Aa</button>
+                    <button class="px-2 py-0.5 bg-sky-600 text-white border border-sky-700 rounded text-[10px] font-bold shadow-sm">Tt</button>
+                    <button class="px-2 py-0.5 bg-white border border-slate-300 rounded text-[10px] shadow-sm">≡</button>
+                    <button class="px-2 py-0.5 bg-white border border-slate-300 rounded text-[10px] shadow-sm">≡</button>
+                    <button class="px-2 py-0.5 bg-white border border-slate-300 rounded text-[10px] text-red-600 font-bold ml-auto shadow-sm">Reset</button>
+                </div>
+            </div>
+
+            <!-- 5. Font Preview Section -->
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-300 shadow-sm space-y-2">
+                <div class="text-xs font-bold text-slate-800 uppercase">5. Font Preview Section</div>
+                <div class="text-[11px] text-slate-600">Type text input:</div>
+                <div class="flex gap-2">
+                    <input type="text" value="Type text here..." class="flex-1 px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-400">
+                    <button class="px-4 py-1 bg-slate-900 text-white rounded text-xs font-bold shadow hover:bg-slate-800">See Preview</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Panel: Symbol Layers & Live Preview -->
+        <div class="space-y-4 flex flex-col justify-between bg-slate-100 p-2">
+            
+            <!-- Symbol Layers Box -->
+            <div class="bg-slate-50 p-4 rounded-lg border border-slate-300 shadow-sm space-y-3">
+                <h3 class="text-xs font-black text-slate-800 uppercase tracking-wider">Right Panel: Symbol Layers</h3>
+                <p class="text-[10px] text-slate-500 italic">Each layer features an active toggle switch set to the Editable State:</p>
+                
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between items-center bg-white p-2.5 rounded border border-slate-300 shadow-sm">
+                        <div>
+                            <div class="font-bold text-slate-900 text-[11px]">GLOBAL MESH</div>
+                            <div class="text-[9px] text-slate-500">Editable State</div>
+                        </div>
+                        <input type="checkbox" checked class="accent-sky-600 w-4 h-4 cursor-pointer">
+                    </div>
+
+                    <div class="flex justify-between items-center bg-white p-2.5 rounded border border-slate-300 shadow-sm">
+                        <div>
+                            <div class="font-bold text-slate-900 text-[11px]">CAR SYMBOL</div>
+                            <div class="text-[9px] text-slate-500">Editable State</div>
+                        </div>
+                        <input type="checkbox" checked class="accent-sky-600 w-4 h-4 cursor-pointer">
+                    </div>
+
+                    <div class="flex justify-between items-center bg-white p-2.5 rounded border border-slate-300 shadow-sm">
+                        <div>
+                            <div class="font-bold text-slate-900 text-[11px]">MOTORCYCLE SYMBOL</div>
+                            <div class="text-[9px] text-slate-500">Editable State</div>
+                        </div>
+                        <input type="checkbox" checked class="accent-sky-600 w-4 h-4 cursor-pointer">
+                    </div>
+
+                    <div class="flex justify-between items-center bg-white p-2.5 rounded border border-slate-300 shadow-sm">
+                        <div>
+                            <div class="font-bold text-slate-900 text-[11px]">COMPASS SYMBOL</div>
+                            <div class="text-[9px] text-slate-500">Editable State</div>
+                        </div>
+                        <input type="checkbox" checked class="accent-sky-600 w-4 h-4 cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Font Preview Box -->
+            <div class="bg-slate-900 text-white p-4 rounded-lg space-y-2 shadow-inner border border-slate-800">
+                <div class="text-[9px] font-bold text-sky-400 uppercase tracking-widest">Font Preview Display:</div>
+                <div class="space-y-1 pt-1">
+                    <div id="previewMain" class="text-sm font-black tracking-wider">VELODRIVE</div>
+                    <div id="previewMotto" class="text-[10px] font-bold text-sky-300 tracking-wider">EXPLORE | ADVENTURE</div>
+                    <div id="previewSub" class="text-[11px] italic text-slate-300">by ArGie-C Travel and Tours Agency</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function updatePreview() {
+            document.getElementById('previewMain').innerText = document.getElementById('mainHeaderInput').value;
+            document.getElementById('previewSub').innerText = document.getElementById('subHeaderInput').value;
+            document.getElementById('previewMotto').innerText = document.getElementById('mottoInput').value;
+        }
+    </script>
+</body>
+</html>
