@@ -67,10 +67,18 @@ const Home = () => (
         <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Platform Fees</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
           <div className="card p-8">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Vehicle Owner Membership</h3>\n            <p className="text-gray-600 mb-4">Php 2,500/year one-time subscription fee. Charged once per year when you register as a vehicle owner, regardless of how many vehicles you own.</p>\n            <div className="bg-blue-50 p-4 rounded-lg">\n              <p className="text-sm text-blue-800">Paid via PayPal QR Code, PayPal Payment Link, or PayPal Subscription.</p>\n            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Vehicle Owner Membership</h3>
+            <p className="text-gray-600 mb-4">Php 2,500/year one-time subscription fee. Charged once per year when you register as a vehicle owner, regardless of how many vehicles you own.</p>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-800">Paid via PayPal QR Code, PayPal Payment Link, or PayPal Subscription.</p>
+            </div>
           </div>
           <div className="card p-8">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Service Charge per Booking</h3>\n            <p className="text-gray-600 mb-4">Php 250 flat service charge deducted from each rental payment. Paid via PayPal wallet, QR code, or payment link.</p>\n            <div className="bg-green-50 p-4 rounded-lg">\n              <p className="text-sm text-green-800">Owner receives: Rental amount − Php 250 service charge. Admin receives: Php 250 service charge.</p>\n            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Service Charge per Booking</h3>
+            <p className="text-gray-600 mb-4">Php 250 flat service charge deducted from each rental payment. Paid via PayPal wallet, QR code, or payment link.</p>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <p className="text-sm text-green-800">Owner receives: Rental amount − Php 250 service charge. Admin receives: Php 250 service charge.</p>
+            </div>
           </div>
         </div>
       </div>
