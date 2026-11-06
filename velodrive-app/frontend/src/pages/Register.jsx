@@ -24,21 +24,36 @@ const Register = () => {
       return;
     }
     try {
-      await api.post('/auth/register', {
+      const res = await api.post('/auth/register', {
         role: formData.role,
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        email: formData.email.trim(),
+        email: formData.email.trim().toLowerCase(),
         password: formData.password,
         phone: formData.phone.trim(),
         address: formData.address.trim(),
         gdprConsent: true,
       });
-
-      setMessage('Verification code sent to your email!');
-      setStep('verify'); // Switch to OTP verification input view
+      const data = res.data || {};
+      if (data.emailSent === false) {
+        setError(data.message || 'Account created, but the verification email could not be sent. Use “Resend code”.');
+      } else {
+        setMessage(data.message || 'Verification code sent to your email!');
+      }
+      setStep('verify');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setError('');
+    setMessage('');
+    try {
+      const res = await api.post('/auth/resend-otp', { email: formData.email.trim().toLowerCase() });
+      setMessage(res.data?.message || 'A new verification code was sent.');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not resend code. Please try again.');
     }
   };
 
@@ -138,6 +153,9 @@ const Register = () => {
             className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-xl transition cursor-pointer text-sm"
           >
             Verify Email
+          </button>
+          <button type="button" onClick={handleResendOTP} className="w-full py-2 text-sky-700 font-bold text-sm hover:underline">
+            Resend code
           </button>
         </form>
       )}

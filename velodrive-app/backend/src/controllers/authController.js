@@ -66,17 +66,28 @@ const register = async (req, res) => {
       });
     }
 
-    // Send OTP email
-    await sendOTPEmail(email, otpCode);
+    // Send OTP email and report delivery status honestly
+    const emailResult = await sendOTPEmail(email, otpCode);
 
     const userResponse = user.toJSON();
     delete userResponse.password;
     delete userResponse.otpCode;
 
+    if (!emailResult || emailResult.success === false) {
+      return res.status(201).json({
+        success: true,
+        emailSent: false,
+        message: 'Account created, but the verification email could not be sent. Please use “Resend code”.',
+        emailError: process.env.NODE_ENV === 'production' ? undefined : emailResult?.error,
+        user: userResponse,
+      });
+    }
+
     res.status(201).json({
       success: true,
+      emailSent: true,
       message: 'Registration successful. Please verify your email with the OTP sent.',
-      user: userResponse
+      user: userResponse,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -213,4 +224,33 @@ const getMe = async (req, res) => {
   res.json({ success: true, user: req.user });
 };
 
-module.exports = { register, verifyOTP, login, refreshToken, logout, getMe };
+const resendOTP = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+
+    const user = await User.findOne({ where: { email } });
+    // Avoid leaking whether the email exists
+    if (!user) return res.json({ success: true, message: 'If the account exists and is unverified, a new code was sent.' });
+    if (user.isEmailVerified) return res.status(400).json({ success: false, message: 'Account is already verified. Please log in.' });
+
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    user.otpCode = otpCode;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    const emailResult = await sendOTPEmail(email, otpCode);
+    if (!emailResult || emailResult.success === false) {
+      return res.status(502).json({
+        success: false,
+        message: 'Could not send verification email. Check email configuration (RESEND_API_KEY or SMTP) and try again.',
+        emailError: process.env.NODE_ENV === 'production' ? undefined : emailResult?.error,
+      });
+    }
+    res.json({ success: true, message: 'A new verification code was sent to your email.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { register, verifyOTP, resendOTP, login, refreshToken, logout, getMe };
