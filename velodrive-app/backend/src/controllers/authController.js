@@ -13,12 +13,19 @@ const register = async (req, res) => {
   try {
     const { role, firstName, lastName, email, password, phone, address, gdprConsent } = req.body;
 
-    if (!role || !firstName || !lastName || !email || !password || !phone || !address) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
+    // Public registration should not create admins; admins are seeded/managed separately.
+    if (role === 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin accounts cannot be self-registered.' });
     }
 
-    if (!['admin', 'owner', 'renter'].includes(role)) {
+    if (!['owner', 'renter'].includes(role)) {
       return res.status(400).json({ success: false, message: 'Invalid role' });
+    }
+
+    const missing = ['firstName', 'lastName', 'email', 'password', 'phone', 'address']
+      .filter((k) => String(req.body?.[k] ?? '').trim() === '');
+    if (missing.length) {
+      return res.status(400).json({ success: false, message: `Missing required fields: ${missing.join(', ')}` });
     }
 
     let existingUser = await User.findOne({ where: { email } });

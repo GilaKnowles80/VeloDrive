@@ -5,7 +5,9 @@ import api from '../utils/api';
 
 const Register = () => {
   const [step, setStep] = useState('register'); // 'register' or 'verify'
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'renter' });
+  const [formData, setFormData] = useState({
+    firstName: '', lastName: '', email: '', phone: '', address: '', password: '', role: 'renter', gdprConsent: false,
+  });
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -17,16 +19,20 @@ const Register = () => {
     e.preventDefault();
     setError('');
     setMessage('');
+    if (!formData.gdprConsent) {
+      setError('GDPR consent is required to register.');
+      return;
+    }
     try {
       await api.post('/auth/register', {
         role: formData.role,
-        firstName: formData.name,
-        lastName: '',
-        email: formData.email,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
         password: formData.password,
-        phone: '',
-        address: '',
-        gdprConsent: true
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
+        gdprConsent: true,
       });
 
       setMessage('Verification code sent to your email!');
@@ -68,52 +74,45 @@ const Register = () => {
 
       {step === 'register' ? (
         <form onSubmit={handleRegisterSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
-            <input 
-              type="text" 
-              value={formData.name} 
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-              required 
-              className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">First Name</label>
+              <input type="text" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} required className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Last Name</label>
+              <input type="text" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} required className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500" />
+            </div>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
-            <input 
-              type="email" 
-              value={formData.email} 
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
-              required 
-              className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500"
-            />
+            <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Phone</label>
+            <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} required className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Address</label>
+            <input type="text" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} required className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500" />
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
-            <input 
-              type="password" 
-              value={formData.password} 
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })} 
-              required 
-              className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500"
-            />
+            <input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500" />
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Account Role</label>
-            <select 
-              value={formData.role} 
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })} 
-              className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-sky-500"
-            >
+            <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-sky-500">
               <option value="renter">Renter</option>
               <option value="owner">Vehicle Owner</option>
-              <option value="admin">Admin</option>
             </select>
+            <p className="text-[11px] text-slate-500 mt-1">Admin accounts are created by the system administrator.</p>
           </div>
-          <button 
-            type="submit" 
-            className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-xl transition cursor-pointer text-sm"
-          >
+          <label className="flex items-start gap-2 text-xs text-slate-600">
+            <input type="checkbox" checked={formData.gdprConsent} onChange={(e) => setFormData({ ...formData, gdprConsent: e.target.checked })} required />
+            <span>I consent to data processing as required for account creation (GDPR).</span>
+          </label>
+          <button type="submit" className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-xl transition cursor-pointer text-sm">
             Register & Send OTP
           </button>
         </form>
