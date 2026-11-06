@@ -91,27 +91,37 @@ npm install
 npm run dev         # Start on http://localhost:3000
 ```
 
+## Canonical deployment (one path each — do not create/link others)
+
+| App | Vercel project | Canonical URL | Run Vercel CLI from | Link command |
+|---|---|---|---|---|
+| **Frontend** | `frontend-2o4j` | https://frontend-2o4j.vercel.app | `velodrive-app/frontend` | `vercel link --yes --project frontend-2o4j` |
+| **Backend** | `velo-drive-lj7t` | https://velo-drive-lj7t.vercel.app | `velodrive-app/backend` | `vercel link --yes --project velo-drive-lj7t` |
+
+- **Never** run `vercel link` or `vercel deploy` from repo root (`C:\Users\Gila\VeloDrive`) or `velodrive-app/` root. Only the two app folders above may contain `.vercel/project.json`.
+- Frontend API proxy: `frontend/vercel.json` rewrites `/api/*` → `https://velo-drive-lj7t.vercel.app/api/$1` (canonical backend). Keep this in sync with the backend project.
+- **Neon (database):** use **one** Neon project/branch connection string. Set the same `DATABASE_URL` in Vercel for the **backend** project (`velo-drive-lj7t`) and in local `backend/.env` (gitignored). Do not create parallel Neon connection strings for other Vercel projects.
+- Vercel dashboard links you shared (deployment views): Frontend https://vercel.com/gilaknowles80/frontend-2o4j/7pj3VHhzcgaMYaJVbEatbBZy7pWr — Backend https://vercel.com/gilaknowles80/velo-drive-lj7t/9tR2BRMRj1PGw2L1mHGx5QSxUTVm
+
 ## Deployment
 
-### Backend on Vercel + Neon Database
+### Backend on Vercel + Neon Database (canonical)
 
-1. Create a [Neon](https://neon.tech) serverless PostgreSQL database
-2. Copy the `DATABASE_URL` connection string
-3. Create a [Vercel](https://vercel.com) project and connect this repo
-4. Add environment variables in Vercel:
-   - `DATABASE_URL` (from Neon)
-   - `JWT_SECRET`
-   - `FRONTEND_URL`
+1. Neon: create/use **one** serverless PostgreSQL database and copy its `DATABASE_URL`.
+2. Vercel project: **`velo-drive-lj7t`** (backend). Link only from `velodrive-app/backend`.
+3. Add environment variables in Vercel (`velo-drive-lj7t`):
+   - `DATABASE_URL` (single Neon connection string)
+   - `JWT_SECRET`, `FRONTEND_URL` (set to `https://frontend-2o4j.vercel.app`)
    - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
    - `SENDGRID_API_KEY`, `FROM_EMAIL`
-5. Deploy
+4. Deploy: `cd velodrive-app/backend && vercel --prod --yes`
 
-### Frontend on Vercel
+### Frontend on Vercel (canonical)
 
-1. Connect the frontend folder to Vercel
-2. Build command: `npm run build`
-3. Output directory: `dist`
-4. Set the API proxy to your backend URL
+1. Vercel project: **`frontend-2o4j`**. Link only from `velodrive-app/frontend`.
+2. Build command: `npm run build` — Output: `dist`
+3. API proxy targets canonical backend (`velo-drive-lj7t`) via `frontend/vercel.json`.
+4. Deploy: `cd velodrive-app/frontend && vercel --prod --yes`
 
 ## Communication Channels
 
