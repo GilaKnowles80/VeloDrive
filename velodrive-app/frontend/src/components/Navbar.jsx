@@ -5,7 +5,7 @@ import {
   LayoutDashboard, User, Wallet, LogOut, Search,
   CreditCard, LogIn, UserPlus, ShieldAlert
 } from 'lucide-react';
-import logo from '../assets/logo.svg';
+import logo from '../assets/logo.jpg';
 
 const Navbar = () => {
   const { user, logout, isAdmin, isOwner, isRenter } = useAuth();

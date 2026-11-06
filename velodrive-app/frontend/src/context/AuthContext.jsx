@@ -30,7 +30,18 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (user, accessToken, refreshToken) => {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    setUser(user);
+    return { success: true, user, tokens: { accessToken, refreshToken } };
+  };
+
+  const isAdmin = user?.role === 'admin';
+  const isOwner = user?.role === 'owner';
+  const isRenter = user?.role === 'renter';
+
+  const loginWithCredentials = async (email, password) => {
     const res = await fetch('http://localhost:5000/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -38,9 +49,10 @@ export const AuthProvider = ({ children }) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Login failed');
-    
-    localStorage.setItem('token', data.token);
-    setUser(data.user);
+    const { user, tokens } = data;
+    localStorage.setItem('accessToken', tokens.accessToken);
+    localStorage.setItem('refreshToken', tokens.refreshToken);
+    setUser(user);
     return data;
   };
 
@@ -64,7 +76,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, isAdmin, isOwner, isRenter, login, loginWithCredentials, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

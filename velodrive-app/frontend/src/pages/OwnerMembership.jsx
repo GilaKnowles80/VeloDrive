@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import api from '../utils/api';
-import { CreditCard, Wallet, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 const OwnerMembership = () => {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState(null);
   const [message, setMessage] = useState('');

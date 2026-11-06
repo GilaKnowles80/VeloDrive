@@ -94,7 +94,7 @@ const verifyOTP = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    if (user.isVerified) {
+    if (user.isEmailVerified) {
       return res.status(400).json({ success: false, message: 'Account is already verified' });
     }
 
@@ -103,7 +103,7 @@ const verifyOTP = async (req, res) => {
     }
 
     // Mark user as verified and clear OTP fields
-    user.isVerified = true;
+    user.isEmailVerified = true;
     user.otpCode = null;
     user.otpExpires = null;
     await user.save();
@@ -142,7 +142,7 @@ const login = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Account data has been erased' });
     }
 
-    if (!user.isVerified) {
+    if (!user.isEmailVerified) {
       return res.status(403).json({ success: false, message: 'Please verify your email address using the OTP code before logging in.' });
     }
 

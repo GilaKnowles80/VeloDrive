@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, MapPin, Calendar, Car, Truck, Motorcycle, Bus, MapPinRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Car, Truck, Motorcycle, MapPinRight } from 'lucide-react';
+import logo from '../assets/logo.jpg';
 
 const VEHICLE_TYPES = [
   'Motorcycle','Car','Van','SUV','Sedan','Coupe','Hatchback','Pickup',
@@ -13,7 +14,7 @@ const VEHICLE_TYPES = [
 const ICON_MAP = {
   'Motorcycle': Motorcycle,
   'Car': Car,
-  'Van': Van,
+  'Van': Truck,
   'SUV': Truck,
   'Sedan': Car,
   'Coupe': Car,
@@ -30,7 +31,7 @@ const ICON_MAP = {
   'Cabriolet': Car,
   'Limousine': Car,
   'Formula 1': Car,
-  'Mini Van': Van,
+  'Mini Van': Truck,
   'Liftback': Car,
   '10-Wheeler Truck': Truck,
   'Trailer Truck': Truck,
@@ -208,7 +209,7 @@ const VehicleTypePage = () => {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
             <div className="flex items-center gap-2">
-              <img src="/logo.svg" alt="VeloDrive Logo" className="w-10 h-10" />
+              <img src={logo} alt="VeloDrive Logo" className="w-10 h-10" />
               <span className="text-2xl font-bold tracking-tight">
                 Ve<span className="text-blue-400">lo</span>Drive
               </span>

@@ -1,4 +1,4 @@
-# VeloDrive - All Vehicle Rental Marketplace
+﻿# VeloDrive - All Vehicle Rental Marketplace
 
 A complete vehicle rental platform supporting all vehicle types (motorcycle, cars, vans, SUV, sedan, coupe, hatchback, pickup, off-road, sport, micro, convertible, wagon, crossover, muscle, roadster, cabriolet, limousine, formula 1, mini van, liftback, 10-wheeler trucks, trailer trucks, dump trucks, wheel loaders, payloaders, boom trucks, cranes, and more).
 
@@ -10,7 +10,7 @@ A complete vehicle rental platform supporting all vehicle types (motorcycle, car
 - **Document Uploads**: Certificate of registration, proof of ownership, original certificates, NBI clearance, tax certificates, valid ID, driver's license
 - **Owner Membership**: Php 2,500 one-time yearly platform fee + Php 250 service charge per booking
 - **E-Wallet**: Connected to bank account, withdrawable, supports refunds
-- **Split Payment Escrow**: AaaS-plus-transaction model — renter pays → escrow → split (owner 90%, admin 10%)
+- **Split Payment Escrow**: AaaS-plus-transaction model â€” renter pays â†’ escrow â†’ split (owner 90%, admin 10%)
 - **Rental Flow**: Pickup/return/destination points, number of days, fuel/damage/delay charges
 - **Admin Dashboard**: Monitor all transactions, users, vehicles, bookings, vehicle location tracking
 - **Owner Dashboard**: Manage vehicles, track bookings, earnings, vehicle location tracking
@@ -24,30 +24,30 @@ A complete vehicle rental platform supporting all vehicle types (motorcycle, car
 
 ```
 velodrive-app/
-├── backend/              # Node.js + Express API
-│   ├── src/
-│   │   ├── config/       # Database config (Neon support)
-│   │   ├── controllers/  # Route controllers
-│   │   ├── models/       # Sequelize models
-│   │   ├── routes/       # API routes
-│   │   ├── middleware/   # Auth, upload, GDPR, error handling
-│   │   ├── services/     # Wallet, payment, GDPR, communication
-│   │   ├── utils/        # Seed script
-│   │   └── uploads/      # File uploads
-│   ├── package.json
-│   └── .env.example
-├── frontend/             # React + Vite + Tailwind
-│   ├── src/
-│   │   ├── components/   # Navbar, ProtectedRoute
-│   │   ├── context/      # AuthContext
-│   │   ├── pages/        # Home, Login, Register, Dashboards, Wallet, Profile, GDPR
-│   │   ├── utils/        # API client
-│   │   └── App.jsx
-│   ├── package.json
-│   ├── vite.config.js
-│   └── tailwind.config.js
-├── vercel.json           # Vercel deployment config
-└── README.md
+â”œâ”€â”€ backend/              # Node.js + Express API
+â”‚   â”œâ”€â”€ src/
+â”‚   â”‚   â”œâ”€â”€ config/       # Database config (Neon support)
+â”‚   â”‚   â”œâ”€â”€ controllers/  # Route controllers
+â”‚   â”‚   â”œâ”€â”€ models/       # Sequelize models
+â”‚   â”‚   â”œâ”€â”€ routes/       # API routes
+â”‚   â”‚   â”œâ”€â”€ middleware/   # Auth, upload, GDPR, error handling
+â”‚   â”‚   â”œâ”€â”€ services/     # Wallet, payment, GDPR, communication
+â”‚   â”‚   â”œâ”€â”€ utils/        # Seed script
+â”‚   â”‚   â””â”€â”€ uploads/      # File uploads
+â”‚   â”œâ”€â”€ package.json
+â”‚   â””â”€â”€ .env.example
+â”œâ”€â”€ frontend/             # React + Vite + Tailwind
+â”‚   â”œâ”€â”€ src/
+â”‚   â”‚   â”œâ”€â”€ components/   # Navbar, ProtectedRoute
+â”‚   â”‚   â”œâ”€â”€ context/      # AuthContext
+â”‚   â”‚   â”œâ”€â”€ pages/        # Home, Login, Register, Dashboards, Wallet, Profile, GDPR
+â”‚   â”‚   â”œâ”€â”€ utils/        # API client
+â”‚   â”‚   â””â”€â”€ App.jsx
+â”‚   â”œâ”€â”€ package.json
+â”‚   â”œâ”€â”€ vite.config.js
+â”‚   â””â”€â”€ tailwind.config.js
+â”œâ”€â”€ vercel.json           # Vercel deployment config
+â””â”€â”€ README.md
 ```
 
 ## Tech Stack
@@ -62,6 +62,7 @@ velodrive-app/
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js v18+
 - PostgreSQL (local) or Neon Database account (serverless)
 - npm
@@ -78,8 +79,9 @@ npm run dev         # Start on http://localhost:5000
 ```
 
 Default admin credentials:
+
 - Email: `gctravelandtours2021@gmail.com`
-- Password: `Admin@123456` (change via `ADMIN_PASSWORD` in `.env`)
+- Password: set via `ADMIN_PASSWORD` in `.env` (never commit real passwords)
 
 ### Frontend Setup
 
@@ -114,6 +116,7 @@ npm run dev         # Start on http://localhost:3000
 ## Communication Channels
 
 All dashboards (Admin, Owner, Renter) support notifications via:
+
 - **Phone Call** (voice)
 - **Phone Text / SMS**
 - **Email**
@@ -130,3 +133,4 @@ Configure `TWILIO_*` and `SENDGRID_API_KEY` in `.env` to enable real notificatio
 ## License
 
 MIT
+

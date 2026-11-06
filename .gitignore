@@ -1,1 +1,9 @@
-.vercel
+﻿.vercel
+# Environment files (contain secrets) - keep examples only
+.env
+.env.*
+*.env
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example

@@ -1,7 +1,7 @@
 ﻿import React from 'react';
 import { Link } from 'react-router-dom';
 import { Wallet, Users } from 'lucide-react';
-import logo from '../assets/logo.svg';
+import logo from '../assets/logo.jpg';
 import VehicleTypesFilter from '../components/VehicleTypesFilter';
 
 const Home = () => (
@@ -71,4 +71,3 @@ const Home = () => (
 );
 
 export default Home;
-

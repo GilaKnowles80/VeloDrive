@@ -10,10 +10,13 @@ const { Booking, Transaction, User } = require('../models');
  */
 const verifyWebhookSignature = (req, res, next) => {
   const signature = req.headers['webhook-signature'] || req.headers['x-webhook-signature'];
-  const secret = process.env.WEBHOOK_SECRET || '86L924545P298361E';
+  const secret = process.env.WEBHOOK_SECRET;
 
   if (!secret) {
-    return res.status(500).json({ success: false, message: 'Webhook secret not configured' });
+    return res.status(503).json({ success: false, message: 'Webhook secret not configured' });
+  }
+  if (!signature) {
+    return res.status(401).json({ success: false, message: 'Missing webhook signature' });
   }
 
   const expected = crypto.createHmac('sha256', secret)

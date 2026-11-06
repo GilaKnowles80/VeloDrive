@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../utils/api';
 
 const Register = () => {
   const [step, setStep] = useState('register'); // 'register' or 'verify'
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'customer' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'renter' });
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  
-  const { register } = useAuth();
+
+  const { loginWithCredentials } = useAuth();
   const navigate = useNavigate();
 
   const handleRegisterSubmit = async (e) => {
@@ -17,12 +18,21 @@ const Register = () => {
     setError('');
     setMessage('');
     try {
-      await register(formData);
+      await api.post('/auth/register', {
+        role: formData.role,
+        firstName: formData.name,
+        lastName: '',
+        email: formData.email,
+        password: formData.password,
+        phone: '',
+        address: '',
+        gdprConsent: true
+      });
 
       setMessage('Verification code sent to your email!');
       setStep('verify'); // Switch to OTP verification input view
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || 'Registration failed');
     }
   };
 
@@ -31,22 +41,19 @@ const Register = () => {
     setError('');
     setMessage('');
     try {
-      const res = await fetch('http://localhost:5000/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, otp })
+      const res = await api.post('/auth/verify-otp', {
+        email: formData.email,
+        otp
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'OTP verification failed');
+      const data = res.data;
 
-      // If backend returns token upon verification, store it
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      if (data.tokens) {
+        await loginWithCredentials(data.user, data.tokens.accessToken, data.tokens.refreshToken);
       }
-      
+
       navigate('/');
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || 'OTP verification failed');
     }
   };
 
@@ -98,8 +105,9 @@ const Register = () => {
               onChange={(e) => setFormData({ ...formData, role: e.target.value })} 
               className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-sky-500"
             >
-              <option value="customer">Customer / Renter</option>
+              <option value="renter">Renter</option>
               <option value="owner">Vehicle Owner</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
           <button 
