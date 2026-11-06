@@ -1,5 +1,20 @@
 ﻿const paypal = require('@paypal/checkout-server-sdk');
 const { Booking, Transaction, User, Vehicle } = require('../models');
+const { withTimeout, retry, CircuitBreaker } = require('../utils/resilience');
+
+const paypalCircuit = new CircuitBreaker({ name: 'paypal', failureThreshold: 4, resetMs: 60000 });
+const PAYPAL_TIMEOUT_MS = Number(process.env.PAYPAL_TIMEOUT_MS || 20000);
+
+const execPayPal = (request) =>
+  paypalCircuit.exec(() => retry(
+    () => withTimeout(paypalClient.execute(request), PAYPAL_TIMEOUT_MS, 'paypal'),
+    {
+      retries: 2,
+      baseDelayMs: 500,
+      shouldRetry: (err) => err?.code !== 'CIRCUIT_OPEN' && !/invalid|unauthorized|malformed/i.test(err?.message || ''),
+      onRetry: (err, attempt) => console.warn(JSON.stringify({ level: 'warn', msg: 'paypal_retry', attempt, error: err.message })),
+    }
+  ));
 
 /**
  * PayPal Environment Configuration
@@ -109,7 +124,7 @@ const buildMultiPartyPaymentRequest = ({
 const createPayPalOrder = async (paymentDetails) => {
   try {
     const { request, split } = buildMultiPartyPaymentRequest(paymentDetails);
-    const response = await paypalClient.execute(request);
+    const response = await execPayPal(request);
 
     return {
       success: true,
@@ -119,7 +134,7 @@ const createPayPalOrder = async (paymentDetails) => {
       approvalUrl: response.result.links.find(l => l.rel === 'approve')?.href
     };
   } catch (error) {
-    console.error('PayPal order creation error:', error.message);
+    console.error(JSON.stringify({ level: 'error', msg: 'paypal_order_create_error', error: error.message, circuit: paypalCircuit.snapshot() }));
     return { success: false, error: error.message };
   }
 };
@@ -130,7 +145,7 @@ const createPayPalOrder = async (paymentDetails) => {
 const capturePayPalPayment = async (orderId) => {
   try {
     const request = new paypal.orders.OrdersCaptureRequest(orderId);
-    const response = await paypalClient.execute(request);
+    const response = await execPayPal(request);
 
     const capture = response.result.purchase_units[0].payments.captures[0];
     return {
@@ -142,7 +157,7 @@ const capturePayPalPayment = async (orderId) => {
       paypalResponse: response.result
     };
   } catch (error) {
-    console.error('PayPal capture error:', error.message);
+    console.error(JSON.stringify({ level: 'error', msg: 'paypal_capture_error', error: error.message, circuit: paypalCircuit.snapshot() }));
     return { success: false, error: error.message };
   }
 };
@@ -316,7 +331,7 @@ const refundPayment = async ({ paypalTransactionId, amount, reason }) => {
       note_to_payer: reason
     });
 
-    const response = await paypalClient.execute(request);
+    const response = await execPayPal(request);
 
     return {
       success: true,
@@ -325,7 +340,7 @@ const refundPayment = async ({ paypalTransactionId, amount, reason }) => {
       amount: parseFloat(response.result.amount.value)
     };
   } catch (error) {
-    console.error('PayPal refund error:', error.message);
+    console.error(JSON.stringify({ level: 'error', msg: 'paypal_refund_error', error: error.message, circuit: paypalCircuit.snapshot() }));
     return { success: false, error: error.message };
   }
 };

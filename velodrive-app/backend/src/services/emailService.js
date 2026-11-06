@@ -1,4 +1,8 @@
 ﻿const nodemailer = require('nodemailer');
+const { withTimeout, retry, CircuitBreaker } = require('../utils/resilience');
+
+const emailCircuit = new CircuitBreaker({ name: 'email', failureThreshold: 4, resetMs: 60000 });
+const EMAIL_TIMEOUT_MS = Number(process.env.EMAIL_TIMEOUT_MS || 15000);
 
 /**
  * Robust OTP email delivery:
@@ -26,11 +30,11 @@ const sendViaResend = async (to, otpCode) => {
   if (!apiKey) return null;
   const from = process.env.FROM_EMAIL || process.env.EMAIL_FROM || 'VeloDrive <onboarding@resend.dev>';
   const { subject, text, html } = buildOtpEmail(otpCode);
-  const resp = await fetch('https://api.resend.com/emails', {
+  const resp = await withTimeout(fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from, to: [to], subject, text, html }),
-  });
+  }), EMAIL_TIMEOUT_MS, 'resend');
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(data?.message || data?.error?.message || `Resend API error ${resp.status}`);
   return { provider: 'resend', messageId: data.id };
@@ -46,36 +50,44 @@ const sendViaSmtp = async (to, otpCode) => {
     port,
     secure,
     auth: { user: EMAIL_USER, pass: EMAIL_PASS },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 20000,
+    connectionTimeout: Math.min(EMAIL_TIMEOUT_MS, 15000),
+    greetingTimeout: 10000,
+    socketTimeout: EMAIL_TIMEOUT_MS,
   });
   const { subject, text, html } = buildOtpEmail(otpCode);
-  const info = await transporter.sendMail({
+  const info = await withTimeout(transporter.sendMail({
     from: `"VeloDrive" <${FROM_EMAIL || EMAIL_USER}>`,
     to,
     subject,
     text,
     html,
-  });
+  }), EMAIL_TIMEOUT_MS, 'smtp');
   return { provider: 'smtp', messageId: info.messageId };
 };
 
 const sendOTPEmail = async (email, otpCode) => {
   try {
-    let result = null;
-    // Prefer Resend on production/serverless; SMTP as fallback.
-    if (process.env.RESEND_API_KEY) result = await sendViaResend(email, otpCode);
-    if (!result) result = await sendViaSmtp(email, otpCode);
-    if (!result) {
-      throw new Error('No email provider configured. Set RESEND_API_KEY (recommended) or EMAIL_USER/EMAIL_PASS.');
-    }
-    if (process.env.NODE_ENV !== 'production') console.log('[otp] email sent', { to: email, provider: result.provider, messageId: result.messageId });
+    const result = await emailCircuit.exec(() => retry(async () => {
+      let r = null;
+      if (process.env.RESEND_API_KEY) r = await sendViaResend(email, otpCode);
+      if (!r) r = await sendViaSmtp(email, otpCode);
+      if (!r) {
+        const e = new Error('No email provider configured. Set RESEND_API_KEY (recommended) or EMAIL_USER/EMAIL_PASS.');
+        e.noRetry = true;
+        throw e;
+      }
+      return r;
+    }, {
+      retries: 2,
+      baseDelayMs: 400,
+      shouldRetry: (err) => !err?.noRetry && err?.code !== 'EAUTH',
+      onRetry: (err, attempt) => console.warn(JSON.stringify({ level: 'warn', msg: 'otp_email_retry', attempt, error: err.message })),
+    }));
+    if (process.env.NODE_ENV !== 'production') console.log(JSON.stringify({ level: 'info', msg: 'otp_email_sent', to: email, provider: result.provider, messageId: result.messageId }));
     return { success: true, ...result };
   } catch (error) {
     const detail = error?.response ? JSON.stringify(error.response) : error.message;
-    console.error('[otp] email error:', detail);
-    // Dev/test fallback: surface OTP in server logs so local setup isn't blocked.
+    console.error(JSON.stringify({ level: 'error', msg: 'otp_email_error', error: detail, circuit: emailCircuit.snapshot() }));
     if (process.env.NODE_ENV !== 'production') console.warn('[otp][dev-fallback] code for', email, 'is', otpCode);
     return { success: false, error: error.message || 'Failed to send OTP email', detail };
   }
