@@ -95,6 +95,11 @@ const Vehicle = sequelize.define('Vehicle', {
     type: DataTypes.STRING(255),
     allowNull: true
   },
+  // 1-10 ad image URLs/paths; used by owner ad uploader
+  adImages: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
   adCampaignVideo: {
     type: DataTypes.STRING(255),
     allowNull: true

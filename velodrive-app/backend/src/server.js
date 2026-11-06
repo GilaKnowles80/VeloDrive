@@ -60,6 +60,30 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'VeloDrive API is running' });
 });
 
+// Ensure DB tables exist (safe for serverless cold starts; idempotent)
+let dbReady;
+const ensureDb = async () => {
+  if (!dbReady) {
+    dbReady = (async () => {
+      await connectDB();
+      await sequelize.sync({ alter: { drop: false } });
+    })().catch((e) => {
+      dbReady = null;
+      throw e;
+    });
+  }
+  return dbReady;
+};
+app.use(async (req, res, next) => {
+  if (req.path === '/api/health') return next();
+  try {
+    await ensureDb();
+    next();
+  } catch (e) {
+    next(e);
+  }
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });

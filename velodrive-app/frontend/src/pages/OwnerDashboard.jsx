@@ -1,36 +1,111 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
-import { Car, Wallet, Calendar, Truck, MapPin } from 'lucide-react';
+import { Car, Wallet, Calendar, Truck, MapPin, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
 import GPSMap from '../components/GPSMap';
+
+const API_ORIGIN = import.meta.env.VITE_API_ORIGIN || '';
+const assetUrl = (p) => {
+  if (!p) return '';
+  if (/^https?:\/\//i.test(p)) return p;
+  const path = String(p).replace(/^src[\\/]/, '').replace(/\\/g, '/');
+  return API_ORIGIN ? `${API_ORIGIN}/${path.replace(/^\//, '')}` : `/${path.replace(/^\//, '')}`;
+};
+
+const MAX_IMAGES = 10;
+const emptyAd = () => ({ file: null, preview: '', description: '' });
 
 const OwnerDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({ totalVehicles: 0, totalBookings: 0, totalEarnings: 0, pendingBookings: 0 });
   const [vehicles, setVehicles] = useState([]);
-  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [ads, setAds] = useState([emptyAd()]);
+  const [form, setForm] = useState({
+    type: 'car', make: '', model: '', year: new Date().getFullYear(), color: '',
+    licensePlate: '', vin: '', description: '', pricePerDay: '', adCampaignTitle: '',
+  });
+  const [docs, setDocs] = useState({ certificateOfRegistration: null, proofOfOwnership: null, originalCertificate: null });
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [vResp, bResp] = await Promise.all([
-          api.get('/vehicles/my-vehicles'),
-          api.get('/bookings/my-bookings')
-        ]);
-        setVehicles(vResp.data.vehicles || []);
-        setBookings(bResp.data.bookings || []);
-        setStats({
-          totalVehicles: (vResp.data.vehicles || []).length,
-          totalBookings: (bResp.data.bookings || []).length,
-          totalEarnings: (bResp.data.bookings || []).reduce((sum, b) => sum + parseFloat(b.ownerPayout || 0), 0),
-          pendingBookings: (bResp.data.bookings || []).filter(b => b.status === 'pending').length
-        });
-      } catch (err) { console.error(err); }
-      finally { setLoading(false); }
-    };
-    loadData();
-  }, []);
+  const loadData = async () => {
+    try {
+      const [vResp, bResp] = await Promise.all([
+        api.get('/vehicles/my-vehicles'),
+        api.get('/bookings/my-bookings').catch(() => ({ data: { bookings: [] } })),
+      ]);
+      const v = vResp.data?.vehicles || [];
+      const b = bResp.data?.bookings || [];
+      setVehicles(v);
+      setStats({
+        totalVehicles: v.length,
+        totalBookings: b.length,
+        totalEarnings: b.reduce((sum, x) => sum + parseFloat(x.ownerPayout || 0), 0),
+        pendingBookings: b.filter((x) => x.status === 'pending').length,
+      });
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { loadData(); }, []);
+
+  const onImagePick = (idx, file) => {
+    setErr('');
+    if (!file) return;
+    if (!/^image\/(png|jpeg)$/.test(file.type)) {
+      setErr('Only PNG or JPEG images are allowed.');
+      return;
+    }
+    const next = [...ads];
+    if (next[idx]?.preview) URL.revokeObjectURL(next[idx].preview);
+    next[idx] = { ...next[idx], file, preview: URL.createObjectURL(file) };
+    setAds(next);
+  };
+
+  const addSlot = () => { if (ads.length < MAX_IMAGES) setAds([...ads, emptyAd()]); };
+  const removeSlot = (idx) => {
+    const next = ads.filter((_, i) => i !== idx);
+    if (ads[idx]?.preview) URL.revokeObjectURL(ads[idx].preview);
+    setAds(next.length ? next : [emptyAd()]);
+  };
+
+  const submitVehicleAd = async (e) => {
+    e.preventDefault();
+    setErr(''); setMsg('');
+    const imageCount = ads.filter((a) => a.file).length;
+    if (imageCount < 1) { setErr('Upload at least 1 vehicle ad image (PNG/JPEG).'); return; }
+    if (!docs.certificateOfRegistration || !docs.proofOfOwnership || !docs.originalCertificate) {
+      setErr('Certificate of Registration, Proof of Ownership, and Original Certificate are required.');
+      return;
+    }
+    const fd = new FormData();
+    Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ''));
+    fd.append('folder', 'ads');
+    // Per-image descriptions sent as JSON; backend stores adImages paths.
+    fd.append('adImageDescriptions', JSON.stringify(ads.map((a) => a.description || '')));
+    ads.forEach((a) => { if (a.file) fd.append('adImages', a.file); });
+    Object.entries(docs).forEach(([k, f]) => { if (f) fd.append(k, f); });
+    setSaving(true);
+    try {
+      await api.post('/vehicles/', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setMsg('Vehicle ad submitted. It will appear after verification.');
+      setForm({ type: 'car', make: '', model: '', year: new Date().getFullYear(), color: '', licensePlate: '', vin: '', description: '', pricePerDay: '', adCampaignTitle: '' });
+      setAds([emptyAd()]);
+      setDocs({ certificateOfRegistration: null, proofOfOwnership: null, originalCertificate: null });
+      loadData();
+    } catch (e2) {
+      setErr(e2.response?.data?.message || 'Failed to submit vehicle ad.');
+    } finally { setSaving(false); }
+  };
+
+  const renderVehicleImages = (v) => {
+    let imgs = [];
+    try { imgs = typeof v.adImages === 'string' ? JSON.parse(v.adImages) : (v.adImages || []); } catch { /* keep empty */ }
+    if (!imgs.length && v.adCampaignImage) imgs = [v.adCampaignImage];
+    return imgs;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -38,7 +113,7 @@ const OwnerDashboard = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Owner Dashboard</h1>
-            <p className="text-gray-600">Manage your vehicles and track rentals</p>
+            <p className="text-gray-600">Manage your vehicles, ads, and rentals</p>
           </div>
           <span className="mt-4 md:mt-0 px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
             {user ? `${user.firstName || ''} ${user.lastName || ''}` : 'Guest'}
@@ -50,7 +125,7 @@ const OwnerDashboard = () => {
             { label: 'Vehicles', icon: Car, value: stats.totalVehicles },
             { label: 'Bookings', icon: Calendar, value: stats.totalBookings },
             { label: 'Earnings (PHP)', icon: Wallet, value: stats.totalEarnings },
-            { label: 'Pending', icon: Truck, value: stats.pendingBookings }
+            { label: 'Pending', icon: Truck, value: stats.pendingBookings },
           ].map((stat, i) => (
             <div key={i} className="card">
               <div className="flex items-center justify-between">
@@ -66,79 +141,95 @@ const OwnerDashboard = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">My Vehicles</h2>
+        <div className="card mb-8">
+          <h2 className="text-lg font-bold text-gray-900 mb-1">Vehicle Ad Uploader</h2>
+          <p className="text-sm text-gray-600 mb-4">Upload 1–10 vehicle ad images (PNG/JPEG only). Beside each image, add the vehicle description/details for that ad.</p>
+          {err && <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">{err}</div>}
+          {msg && <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-700 text-sm">{msg}</div>}
+          <form onSubmit={submitVehicleAd} className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <input className="input-field" placeholder="Ad title (e.g., Toyota Vios 2023 - Self Drive)" value={form.adCampaignTitle} onChange={(e)=>setForm({...form, adCampaignTitle:e.target.value})} />
+              <input className="input-field" placeholder="Make" value={form.make} onChange={(e)=>setForm({...form, make:e.target.value})} required />
+              <input className="input-field" placeholder="Model" value={form.model} onChange={(e)=>setForm({...form, model:e.target.value})} required />
+              <select className="input-field" value={form.type} onChange={(e)=>setForm({...form, type:e.target.value})}>{['motorcycle','car','van','suv','sedan','pickup','other'].map(t=><option key={t} value={t}>{t}</option>)}</select>
+              <input className="input-field" type="number" placeholder="Year" value={form.year} onChange={(e)=>setForm({...form, year:e.target.value})} required />
+              <input className="input-field" placeholder="Color" value={form.color} onChange={(e)=>setForm({...form, color:e.target.value})} required />
+              <input className="input-field" placeholder="License plate" value={form.licensePlate} onChange={(e)=>setForm({...form, licensePlate:e.target.value})} required />
+              <input className="input-field" type="number" min="0" step="0.01" placeholder="Price per day (PHP)" value={form.pricePerDay} onChange={(e)=>setForm({...form, pricePerDay:e.target.value})} required />
+              <input className="input-field" placeholder="VIN (optional)" value={form.vin} onChange={(e)=>setForm({...form, vin:e.target.value})} />
             </div>
-            {loading || vehicles.length === 0 ? (
-              <div className="h-64 flex items-center justify-center text-gray-500">
-                {loading ? 'Loading...' : 'No vehicles registered yet'}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {vehicles.map((v) => (
-                  <div key={v.id} className="flex items-center gap-4 p-3 border border-gray-200 rounded-lg bg-white">
-                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <Car className="w-8 h-8 text-gray-500" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{v.make} {v.model}</p>
-                      <p className="text-xs text-gray-500">{v.type} • Php {v.pricePerDay}/day</p>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${v.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {v.isVerified ? 'Verified' : 'Pending'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+            <textarea className="input-field w-full" rows="3" placeholder="Vehicle/ad description (e.g., location, inclusions, self-drive/hire-a-driver, transmission, seats, requirements)" value={form.description} onChange={(e)=>setForm({...form, description:e.target.value})} required />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+              <label className="block">Certificate of Registration (PNG/JPEG/PDF)<input type="file" className="block mt-1 text-sm" onChange={(e)=>setDocs({...docs, certificateOfRegistration:e.target.files[0]})} required /></label>
+              <label className="block">Proof of Ownership<input type="file" className="block mt-1 text-sm" onChange={(e)=>setDocs({...docs, proofOfOwnership:e.target.files[0]})} required /></label>
+              <label className="block">Original Certificate<input type="file" className="block mt-1 text-sm" onChange={(e)=>setDocs({...docs, originalCertificate:e.target.files[0]})} required /></label>
+            </div>
 
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">Recent Bookings</h2>
-            </div>
-            {loading || bookings.length === 0 ? (
-              <div className="h-64 flex items-center justify-center text-gray-500">
-                {loading ? 'Loading...' : 'No bookings yet'}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {bookings.slice(0, 10).map((b) => (
-                  <div key={b.id} className="p-3 border border-gray-200 rounded-lg bg-white">
-                    <p className="font-medium text-gray-900 text-sm">{b.bookingReference}</p>
-                    <p className="text-xs text-gray-500">{b.renter?.firstName || ''} {b.renter?.lastName || ''}</p>
-                    <div className="mt-2 flex items-center gap-2 text-xs">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${b.status === 'completed' ? 'bg-green-100 text-green-700' : b.status === 'active' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                        {b.status || 'Unknown'}
-                      </span>
-                      <span className="text-gray-400">• Php {b.totalAmount || 0}</span>
-                    </div>
+            <div className="space-y-4">
+              {ads.map((ad, idx) => (
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-gray-200 rounded-xl bg-white">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 mb-2">Ad Image {idx + 1} (PNG/JPEG)</p>
+                    <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 bg-gray-50 overflow-hidden">
+                      {ad.preview ? <img src={ad.preview} alt={`Ad ${idx + 1}`} className="h-full w-full object-cover" /> : (
+                        <div className="text-center text-gray-500 p-4"><ImageIcon className="w-8 h-8 mx-auto mb-2" /><span className="text-sm">Choose PNG or JPEG</span></div>
+                      )}
+                      <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e)=>onImagePick(idx, e.target.files[0])} />
+                    </label>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 mb-2">Vehicle Description (beside image)</p>
+                    <textarea className="input-field w-full h-40" placeholder="Vehicle name, rate (e.g., ₱2,500/day), location, features, transmission, seats, fuel, self-drive or with driver, contact/inclusions..." value={ad.description} onChange={(e)=>{const n=[...ads]; n[idx]={...n[idx], description:e.target.value}; setAds(n);}} />
+                    {ads.length > 1 && <button type="button" onClick={()=>removeSlot(idx)} className="mt-2 inline-flex items-center gap-1 text-sm text-red-600"><Trash2 className="w-4 h-4" />Remove</button>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button type="button" onClick={addSlot} disabled={ads.length >= MAX_IMAGES} className="px-4 py-2 rounded-lg border border-gray-300 text-sm disabled:opacity-50"><Upload className="w-4 h-4 inline mr-1" />Add Image Slot ({ads.length}/{MAX_IMAGES})</button>
+              <button type="submit" disabled={saving} className="btn-primary px-6 py-2">{saving ? 'Submitting...' : 'Submit Vehicle Ad'}</button>
+            </div>
+          </form>
         </div>
 
-        <div className="card mt-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900">Vehicle Location Tracking</h2>
-            <p className="text-sm text-gray-500">Real-time GPS tracking on Google Maps / Waze</p>
-          </div>
+        <div className="card mb-8">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">My Vehicle Ads</h2>
+          {loading ? <div className="h-40 flex items-center justify-center text-gray-500">Loading...</div> : vehicles.length === 0 ? (
+            <div className="h-40 flex items-center justify-center text-gray-500">No vehicle ads yet</div>
+          ) : (
+            <div className="space-y-4">
+              {vehicles.map((v) => {
+                const imgs = renderVehicleImages(v);
+                return (
+                  <div key={v.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-gray-200 rounded-xl bg-white">
+                    <div className="grid grid-cols-2 gap-2">
+                      {imgs.length ? imgs.slice(0, 10).map((img, i) => (
+                        <img key={i} src={assetUrl(typeof img === 'string' ? img : img.path || img.url)} alt={`${v.make} ${v.model} ${i + 1}`} className="w-full h-28 object-cover rounded-lg bg-gray-100" onError={(e)=>{e.currentTarget.style.display='none';}} />
+                      )) : <div className="col-span-2 h-28 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400"><Car className="w-8 h-8" /></div>}
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-bold text-gray-900">{v.adCampaignTitle || `${v.make} ${v.model} ${v.year}`}</h3>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${v.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{v.isVerified ? 'Verified' : 'Pending'}</span>
+                      </div>
+                      <p className="text-sm text-blue-700 font-semibold mt-1">Php {v.pricePerDay}/day</p>
+                      <p className="text-xs text-gray-500">{v.type} • {v.color} • {v.licensePlate}</p>
+                      <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap">{v.adCampaignDescription || v.description || 'No description provided.'}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Vehicle Location Tracking</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {vehicles.map((v) => (
-              <div key={v.id} className="h-80">
-                <GPSMap vehicleId={v.id} title={`${v.make} ${v.model} (${v.licensePlate})`} />
-              </div>
+              <div key={v.id} className="h-80"><GPSMap vehicleId={v.id} title={`${v.make} ${v.model} (${v.licensePlate})`} /></div>
             ))}
-            {vehicles.length === 0 && (
-              <div className="h-80 flex flex-col items-center justify-center text-gray-500">
-                <MapPin className="w-10 h-10 mb-2 opacity-50" />
-                <p>No vehicles to track</p>
-              </div>
-            )}
+            {!vehicles.length && <div className="h-40 flex flex-col items-center justify-center text-gray-500"><MapPin className="w-10 h-10 mb-2 opacity-50" /><p>No vehicles to track</p></div>}
           </div>
         </div>
       </div>

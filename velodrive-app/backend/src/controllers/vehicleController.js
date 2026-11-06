@@ -8,6 +8,10 @@ const createVehicle = async (req, res) => {
       adCampaignTitle, adCampaignDescription, gpsDeviceId
     } = req.body;
 
+    const adImageFiles = (req.files?.adImages || []).slice(0, 10);
+    const adImages = adImageFiles.map((f) => f.path || f.location).filter(Boolean);
+    const primaryAdImage = adImages[0] || req.files?.adCampaignImage?.[0]?.path || req.files?.adCampaignImage?.[0]?.location || null;
+
     const vehicle = await Vehicle.create({
       ownerId: req.user.id,
       type,
@@ -18,18 +22,19 @@ const createVehicle = async (req, res) => {
       licensePlate,
       vin,
       description,
-      specifications: specifications ? JSON.parse(specifications) : null,
+      specifications: specifications ? (typeof specifications === 'string' ? JSON.parse(specifications) : specifications) : null,
       pricePerDay,
       pricePerHour: pricePerHour || 0,
       currency: currency || 'PHP',
       adCampaignTitle,
       adCampaignDescription,
       gpsDeviceId,
-      certificateOfRegistration: req.files?.certificateOfRegistration?.[0]?.path || null,
-      proofOfOwnership: req.files?.proofOfOwnership?.[0]?.path || null,
-      originalCertificate: req.files?.originalCertificate?.[0]?.path || null,
-      adCampaignImage: req.files?.adCampaignImage?.[0]?.path || null,
-      adCampaignVideo: req.files?.adCampaignVideo?.[0]?.path || null
+      certificateOfRegistration: req.files?.certificateOfRegistration?.[0]?.path || req.files?.certificateOfRegistration?.[0]?.location || null,
+      proofOfOwnership: req.files?.proofOfOwnership?.[0]?.path || req.files?.proofOfOwnership?.[0]?.location || null,
+      originalCertificate: req.files?.originalCertificate?.[0]?.path || req.files?.originalCertificate?.[0]?.location || null,
+      adCampaignImage: primaryAdImage,
+      adImages: adImages.length ? adImages : null,
+      adCampaignVideo: req.files?.adCampaignVideo?.[0]?.path || req.files?.adCampaignVideo?.[0]?.location || null
     });
 
     res.status(201).json({ success: true, message: 'Vehicle created', vehicle });

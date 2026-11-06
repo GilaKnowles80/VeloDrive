@@ -41,7 +41,15 @@ const storage = useS3
       },
     });
 
+const isAdImageField = (field) => ['adCampaignImage', 'adImages'].includes(field);
+
 const fileFilter = (req, file, cb) => {
+  if (isAdImageField(file.fieldname)) {
+    const ok = /jpeg|jpg|png/.test(path.extname(file.originalname).toLowerCase()) && /image\/(jpeg|png)/.test(file.mimetype);
+    if (ok) return cb(null, true);
+    return cb(new Error('Vehicle ad images must be PNG or JPEG (1–10 images)'), false);
+  }
+
   const allowed = /jpeg|jpg|png|pdf|mp4|mov|avi|doc|docx/;
   const ext = allowed.test(path.extname(file.originalname).toLowerCase());
   const mime = allowed.test(file.mimetype);
