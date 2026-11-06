@@ -1,0 +1,7 @@
+﻿# Keep a single canonical Vercel link per app:
+# frontend -> velodrive-app/frontend (project: frontend-2o4j)
+# backend  -> velodrive-app/backend  (project: velo-drive-lj7t)
+# Do not run vercel link from repo root or velodrive-app root.
+.vercel
+node_modules
+dist
