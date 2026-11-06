@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
-import { Mail, Lock, User as UserIcon } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, KeyRound } from 'lucide-react';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [otp, setOtp] = useState('');
+  const [needsVerify, setNeedsVerify] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -15,18 +19,65 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setMessage('');
     try {
-      const response = await api.post('/auth/login', formData);
+      const response = await api.post('/auth/login', {
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+      });
       const { user, tokens } = response.data;
-      // Remove password from user object
       const userWithoutPassword = { ...user };
       delete userWithoutPassword.password;
       login(userWithoutPassword, tokens.accessToken, tokens.refreshToken);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      const msg = err.response?.data?.message || 'Login failed';
+      setError(msg);
+      if (/verify|otp|verification/i.test(msg)) setNeedsVerify(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      const res = await api.post('/auth/verify-otp', {
+        email: formData.email.trim().toLowerCase(),
+        otp: otp.trim(),
+      });
+      const { user, tokens } = res.data;
+      if (user && tokens) {
+        const userWithoutPassword = { ...user };
+        delete userWithoutPassword.password;
+        login(userWithoutPassword, tokens.accessToken, tokens.refreshToken);
+        navigate('/');
+        return;
+      }
+      setMessage('Email verified. Please sign in.');
+      setNeedsVerify(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'OTP verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setResending(true);
+    setError('');
+    setMessage('');
+    try {
+      const res = await api.post('/auth/resend-otp', { email: formData.email.trim().toLowerCase() });
+      setMessage(res.data?.message || 'A new verification code was sent.');
+      setNeedsVerify(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not resend code.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -45,6 +96,11 @@ const Login = () => {
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
               {error}
+            </div>
+          )}
+          {message && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg text-sm">
+              {message}
             </div>
           )}
           <div className="space-y-2">
@@ -85,6 +141,34 @@ const Login = () => {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        {needsVerify && (
+          <form onSubmit={handleVerifyOtp} className="mt-4 space-y-3 border-t border-gray-200 pt-4">
+            <p className="text-sm text-gray-700 font-medium">Verify your email to continue</p>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">6-Digit OTP Code</label>
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  className="input-field pl-10 tracking-widest"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  required
+                />
+              </div>
+            </div>
+            <button type="submit" className="btn-primary w-full disabled:opacity-50" disabled={loading || otp.length < 6}>
+              {loading ? 'Verifying...' : 'Verify Email'}
+            </button>
+            <button type="button" onClick={handleResendOtp} disabled={resending} className="w-full text-sm text-blue-600 font-medium hover:underline disabled:opacity-50">
+              {resending ? 'Sending...' : 'Resend code'}
+            </button>
+          </form>
+        )}
 
         <p className="mt-6 text-center text-sm text-gray-600">
           Don't have an account?{' '}
