@@ -13,12 +13,7 @@ const register = async (req, res) => {
   try {
     const { role, firstName, lastName, email, password, phone, address, gdprConsent } = req.body;
 
-    // Public registration should not create admins; admins are seeded/managed separately.
-    if (role === 'admin') {
-      return res.status(403).json({ success: false, message: 'Admin accounts cannot be self-registered.' });
-    }
-
-    if (!['owner', 'renter'].includes(role)) {
+    if (!['admin', 'owner', 'renter'].includes(role)) {
       return res.status(400).json({ success: false, message: 'Invalid role' });
     }
 
