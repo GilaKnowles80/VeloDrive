@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { MapPin, Car } from 'lucide-react';
 
 const Vehicles = () => {
+  const navigate = useNavigate();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -21,6 +23,15 @@ const Vehicles = () => {
   const filtered = vehicles.filter(v =>
     `${v.make} ${v.model} ${v.type}`.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleBook = (vehicleId) => {
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    if (!token) {
+      navigate(`/login?next=/renter/dashboard&vehicleId=${encodeURIComponent(vehicleId)}`);
+      return;
+    }
+    navigate(`/renter/dashboard?vehicleId=${encodeURIComponent(vehicleId)}`);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -62,7 +73,7 @@ const Vehicles = () => {
                   <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
                     <MapPin className="w-3 h-3" /> {v.owner?.firstName} {v.owner?.lastName}
                   </div>
-                  <button className="btn-primary w-full text-sm">Book Now</button>
+                  <button className="btn-primary w-full text-sm" onClick={() => handleBook(v.id)}>Book Now</button>
                 </div>
               </div>
             ))

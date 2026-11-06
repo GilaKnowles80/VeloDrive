@@ -1,49 +1,92 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import { Car, Calendar, Wallet, Truck } from 'lucide-react';
 
+const todayISO = () => new Date().toISOString().split('T')[0];
+const addDaysISO = (start, days) => {
+  const d = new Date(start);
+  d.setDate(d.getDate() + Number(days || 1));
+  return d.toISOString().split('T')[0];
+};
+
 const RenterDashboard = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [stats, setStats] = useState({ totalRentals: 0, activeRentals: 0, completedRentals: 0, totalSpent: 0 });
   const [bookings, setBookings] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [bookingForm, setBookingForm] = useState({ vehicleId: '', numberOfDays: '1', pickupPoint: '', returnPoint: '', destinationPoint: '' });
+  const [bookingForm, setBookingForm] = useState({
+    vehicleId: '', rentalStartDate: todayISO(), numberOfDays: '1',
+    pickupPoint: '', returnPoint: '', destinationPoint: '',
+  });
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingError, setBookingError] = useState('');
   const [paypalApprovalUrl, setPaypalApprovalUrl] = useState(null);
 
   const handleBookVehicle = async (e) => {
     e.preventDefault();
+    setBookingError('');
+    setPaypalApprovalUrl(null);
+    const days = parseInt(bookingForm.numberOfDays, 10);
+    if (!bookingForm.vehicleId || !bookingForm.rentalStartDate || !days || days < 1 || days > 365) {
+      setBookingError('Select a vehicle, valid start date, and 1–365 days.');
+      return;
+    }
+    if (!bookingForm.pickupPoint.trim() || !bookingForm.returnPoint.trim()) {
+      setBookingError('Pickup and return points are required.');
+      return;
+    }
     setBookingLoading(true);
     try {
+      const rentalStartDate = bookingForm.rentalStartDate;
+      const rentalEndDate = addDaysISO(rentalStartDate, days);
       const resp = await api.post('/bookings/', {
         vehicleId: bookingForm.vehicleId,
-        rentalStartDate: new Date().toISOString().split('T')[0],
-        rentalEndDate: new Date(Date.now() + 86400000 * parseInt(bookingForm.numberOfDays)).toISOString().split('T')[0],
-        numberOfDays: parseInt(bookingForm.numberOfDays),
-        pickupPoint: bookingForm.pickupPoint,
-        returnPoint: bookingForm.returnPoint,
-        destinationPoint: bookingForm.destinationPoint
+        rentalStartDate,
+        rentalEndDate,
+        numberOfDays: days,
+        pickupPoint: bookingForm.pickupPoint.trim(),
+        returnPoint: bookingForm.returnPoint.trim(),
+        destinationPoint: (bookingForm.destinationPoint || '').trim(),
       });
-      if (resp.data.success && resp.data.paypalOrder) setPaypalApprovalUrl(resp.data.paypalOrder.approvalUrl);
+      const approvalUrl = resp.data?.paypalOrder?.approvalUrl || resp.data?.approvalUrl;
+      if (resp.data?.success && approvalUrl) setPaypalApprovalUrl(approvalUrl);
+      else setBookingError(resp.data?.message || 'Booking created, but no PayPal approval URL was returned.');
     } catch (err) {
-      alert(err.response?.data?.message || 'Booking failed');
-    } finally { setBookingLoading(false); }
+      setBookingError(err.response?.data?.message || 'Booking failed');
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   useEffect(() => {
-    api.get('/bookings/my-rentals').then(r => setBookings(r.data.bookings || []));
-    api.get('/vehicles/').then(r => setVehicles(r.data.vehicles || []));
-    api.get('/bookings/my-rentals').then(r => {
-      const b = r.data.bookings || [];
-      setStats({
-        totalRentals: b.length,
-        activeRentals: b.filter(x => x.status === 'active').length,
-        completedRentals: b.filter(x => x.status === 'completed').length,
-        totalSpent: b.reduce((sum, x) => sum + parseFloat(x.totalAmount || 0), 0)
-      });
-    }).finally(() => setLoading(false));
+    const vid = searchParams.get('vehicleId');
+    if (vid) setBookingForm((f) => ({ ...f, vehicleId: vid }));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [bResp, vResp] = await Promise.all([api.get('/bookings/my-rentals'), api.get('/vehicles/')]);
+        const b = bResp.data?.bookings || [];
+        setBookings(b);
+        setVehicles(vResp.data?.vehicles || []);
+        setStats({
+          totalRentals: b.length,
+          activeRentals: b.filter((x) => x.status === 'active').length,
+          completedRentals: b.filter((x) => x.status === 'completed').length,
+          totalSpent: b.reduce((sum, x) => sum + parseFloat(x.totalAmount || 0), 0),
+        });
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, []);
   return (
     <div className="min-h-screen bg-gray-50">
@@ -103,22 +146,30 @@ const RenterDashboard = () => {
           <form onSubmit={handleBookVehicle} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Vehicle</label>
-              <select className="input-field" value={bookingForm.vehicleId} onChange={e => setBookingForm({...bookingForm, vehicleId: e.target.value})}>
+              <select className="input-field" value={bookingForm.vehicleId} onChange={e => setBookingForm({...bookingForm, vehicleId: e.target.value})} required>
                 <option value="">Select a vehicle</option>
                 {vehicles.map(v => <option key={v.id} value={v.id}>{v.make} {v.model} ({v.type}) - Php {v.pricePerDay}/day</option>)}
               </select>
             </div>
             <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Start date</label>
+              <input className="input-field" type="date" value={bookingForm.rentalStartDate} min={todayISO()} onChange={e => setBookingForm({...bookingForm, rentalStartDate: e.target.value})} required />
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Days</label>
-              <input className="input-field" type="number" value={bookingForm.numberOfDays} onChange={e => setBookingForm({...bookingForm, numberOfDays: e.target.value})} min="1" />
+              <input className="input-field" type="number" value={bookingForm.numberOfDays} onChange={e => setBookingForm({...bookingForm, numberOfDays: e.target.value})} min="1" max="365" required />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Est. return</label>
+              <input className="input-field" type="date" value={addDaysISO(bookingForm.rentalStartDate, bookingForm.numberOfDays)} readOnly />
             </div>
             <div className="md:col-span-2 space-y-2">
               <label className="text-sm font-medium text-gray-700">Pickup Point</label>
-              <input className="input-field" value={bookingForm.pickupPoint} onChange={e => setBookingForm({...bookingForm, pickupPoint: e.target.value})} />
+              <input className="input-field" value={bookingForm.pickupPoint} onChange={e => setBookingForm({...bookingForm, pickupPoint: e.target.value})} required />
             </div>
             <div className="md:col-span-2 space-y-2">
               <label className="text-sm font-medium text-gray-700">Return Point</label>
-              <input className="input-field" value={bookingForm.returnPoint} onChange={e => setBookingForm({...bookingForm, returnPoint: e.target.value})} />
+              <input className="input-field" value={bookingForm.returnPoint} onChange={e => setBookingForm({...bookingForm, returnPoint: e.target.value})} required />
             </div>
             <div className="md:col-span-2 space-y-2">
               <label className="text-sm font-medium text-gray-700">Destination</label>
@@ -130,6 +181,7 @@ const RenterDashboard = () => {
               </button>
             </div>
           </form>
+          {bookingError && <p className="mt-3 text-sm text-red-600">{bookingError}</p>}
           {paypalApprovalUrl && (
             <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm text-blue-800 mb-2">Payment created! Continue to PayPal:</p>
