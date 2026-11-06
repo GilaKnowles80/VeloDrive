@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+const pg = require('pg');
 require('dotenv').config();
 
 // Support Neon serverless PostgreSQL connection string or individual params.
@@ -15,6 +16,7 @@ const dbUrl = rawDbUrl
 
 const common = {
   dialect: 'postgres',
+  dialectModule: pg,
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: {
     max: 10,
