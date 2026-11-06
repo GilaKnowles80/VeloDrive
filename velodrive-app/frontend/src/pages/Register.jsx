@@ -36,10 +36,11 @@ const Register = () => {
       });
       const data = res.data || {};
       if (data.emailSent === false) {
-        setError(data.message || 'Account created, but the verification email could not be sent. Use “Resend code”.');
+        setError(data.message || 'Account created, but the verification email could not be sent. Use "Resend code".');
       } else {
         setMessage(data.message || 'Verification code sent to your email!');
       }
+      if (data.devOtp) setOtp(String(data.devOtp));
       setStep('verify');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -51,7 +52,9 @@ const Register = () => {
     setMessage('');
     try {
       const res = await api.post('/auth/resend-otp', { email: formData.email.trim().toLowerCase() });
-      setMessage(res.data?.message || 'A new verification code was sent.');
+      const data = res.data || {};
+      setMessage(data.message || 'A new verification code was sent.');
+      if (data.devOtp) setOtp(String(data.devOtp));
     } catch (err) {
       setError(err.response?.data?.message || 'Could not resend code. Please try again.');
     }

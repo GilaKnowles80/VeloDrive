@@ -240,14 +240,17 @@ const resendOTP = async (req, res) => {
     await user.save();
 
     const emailResult = await sendOTPEmail(email, otpCode);
+    const exposeDevOtp = process.env.EXPOSE_DEV_OTP === 'true' && process.env.NODE_ENV !== 'production';
+    if (exposeDevOtp) console.warn('[otp][dev] resend code for', email, 'is', otpCode);
     if (!emailResult || emailResult.success === false) {
       return res.status(502).json({
         success: false,
         message: 'Could not send verification email. Check email configuration (RESEND_API_KEY or SMTP) and try again.',
         emailError: process.env.NODE_ENV === 'production' ? undefined : emailResult?.error,
+        ...(exposeDevOtp ? { devOtp: otpCode } : {}),
       });
     }
-    res.json({ success: true, message: 'A new verification code was sent to your email.' });
+    res.json({ success: true, message: 'A new verification code was sent to your email.', ...(exposeDevOtp ? { devOtp: otpCode } : {}) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
