@@ -2,13 +2,11 @@ const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
 // Support Neon serverless PostgreSQL connection string or individual params.
-// IMPORTANT: Use the standard `pg` driver for Sequelize. Do not set `dialectModule`
-// to @neondatabase/serverless here — it is not compatible with this Sequelize
-// version and can cause "SASL"/connection failures. Neon works over `pg` with SSL.
+// Use standard pg driver with Sequelize v6.
+// Neon connection strings often default to channel_binding=require which triggers
+// SASL authentication errors in node-postgres unless stripped.
+// SSL encryption is enforced via dialectOptions below.
 const rawDbUrl = process.env.DATABASE_URL;
-// pg@6 (required for Sequelize 3) can mis-handle Neon URLs with
-// `channel_binding=require`, causing SASL/authentication failures. Strip it;
-// Neon SSL is enforced via dialectOptions below.
 const dbUrl = rawDbUrl
   ? rawDbUrl
       .replace(/([?&])channel_binding=[^&]*(&?)/gi, (_, p, amp) => (p === '?' && amp ? '?' : amp ? p : ''))

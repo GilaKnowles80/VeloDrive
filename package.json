@@ -1,0 +1,16 @@
+{
+  "name": "velodrive",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VeloDrive Marketplace Platform",
+  "scripts": {
+    "install:all": "npm --prefix velodrive-app/backend install && npm --prefix velodrive-app/frontend install",
+    "build": "npm --prefix velodrive-app/frontend run build",
+    "build:backend": "npm --prefix velodrive-app/backend run build",
+    "start": "npm --prefix velodrive-app/backend start",
+    "dev:backend": "npm --prefix velodrive-app/backend run dev",
+    "dev:frontend": "npm --prefix velodrive-app/frontend run dev",
+    "migrate": "npm --prefix velodrive-app/backend run migrate",
+    "seed": "npm --prefix velodrive-app/backend run seed"
+  }
+}

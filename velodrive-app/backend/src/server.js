@@ -59,7 +59,7 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   if (process.env.VERCEL) return;
   await connectDB();
-  await sequelize.sync({ alter: true });
+  await sequelize.sync({ alter: { drop: false } });
   console.log('📦 Database models synchronized');
 
   app.listen(PORT, () => {

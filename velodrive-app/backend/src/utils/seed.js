@@ -7,7 +7,7 @@ const seedAdmin = async () => {
   try {
     await sequelize.authenticate();
     console.log('✅ Database connected successfully');
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ alter: { drop: false } });
     console.log('📦 Database models synchronized');
 
     const adminEmail = process.env.ADMIN_EMAIL;
