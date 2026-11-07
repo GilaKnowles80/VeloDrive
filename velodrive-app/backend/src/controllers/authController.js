@@ -11,7 +11,8 @@ const generateTokens = (userId) => {
 
 const register = async (req, res) => {
   try {
-    const { role, firstName, lastName, email, password, phone, address, gdprConsent } = req.body;
+    const { role, firstName, lastName, password, phone, address, gdprConsent } = req.body;
+    const email = String(req.body?.email || '').trim().toLowerCase();
 
     if (!['admin', 'owner', 'renter'].includes(role)) {
       return res.status(400).json({ success: false, message: 'Invalid role' });
@@ -96,7 +97,8 @@ const register = async (req, res) => {
 
 const verifyOTP = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const otp = String(req.body?.otp ?? '').trim();
 
     if (!email || !otp) {
       return res.status(400).json({ success: false, message: 'Email and OTP code are required' });
@@ -111,8 +113,8 @@ const verifyOTP = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Account is already verified' });
     }
 
-    if (!user.otpCode || user.otpCode !== otp.toString().trim() || new Date() > new Date(user.otpExpires)) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code' });
+    if (!user.otpCode || String(user.otpCode).trim() !== otp || !user.otpExpires || new Date() > new Date(user.otpExpires)) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code. Use the latest code and try Resend code if needed.' });
     }
 
     // Mark user as verified and clear OTP fields
@@ -144,7 +146,8 @@ const verifyOTP = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '');
 
     const user = await User.findOne({ where: { email } });
     if (!user) {
