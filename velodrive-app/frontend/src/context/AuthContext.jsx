@@ -1,86 +1,79 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../utils/api';
 
 export const AuthContext = createContext();
 
+const STORAGE_KEYS = ['accessToken', 'refreshToken', 'token', 'user'];
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+  });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetch('http://localhost:5000/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success || data._id || data.id) {
-            setUser(data.user || data);
-          } else {
-            localStorage.removeItem('token');
-          }
-          setLoading(false);
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const login = async (user, accessToken, refreshToken) => {
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    setUser(user);
-    return { success: true, user, tokens: { accessToken, refreshToken } };
+  const clearSession = () => {
+    STORAGE_KEYS.forEach((k) => localStorage.removeItem(k));
+    setUser(null);
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    if (!token) { setLoading(false); return; }
+    api.get('/auth/me')
+      .then((res) => {
+        const u = res.data?.user || res.data;
+        if (u && (u.id || u._id || u.email)) {
+          setUser(u);
+          localStorage.setItem('user', JSON.stringify(u));
+        } else {
+          clearSession();
+        }
+      })
+      .catch(() => clearSession())
+      .finally(() => setLoading(false));
+  }, []);
+
+  const applySession = (u, accessToken, refreshToken) => {
+    if (accessToken) localStorage.setItem('accessToken', accessToken);
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+    localStorage.setItem('user', JSON.stringify(u || null));
+    setUser(u || null);
+    return u;
+  };
+
+  const isAuthenticated = !!user && !!(localStorage.getItem('accessToken') || localStorage.getItem('token'));
   const isAdmin = user?.role === 'admin';
   const isOwner = user?.role === 'owner';
   const isRenter = user?.role === 'renter';
 
-  const loginWithCredentials = async (email, password) => {
-    const res = await fetch('http://localhost:5000/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Login failed');
-    const { user, tokens } = data;
-    localStorage.setItem('accessToken', tokens.accessToken);
-    localStorage.setItem('refreshToken', tokens.refreshToken);
-    setUser(user);
-    return data;
+  const login = (u, accessToken, refreshToken) => ({ success: true, user: applySession(u, accessToken, refreshToken), tokens: { accessToken, refreshToken } });
+
+  const loginWithCredentials = async (emailOrUser, passwordOrToken, maybeRefresh) => {
+    // Back-compat: loginWithCredentials(email, password) OR loginWithCredentials(user, accessToken, refreshToken)
+    if (passwordOrToken && !maybeRefresh && typeof emailOrUser === 'object') {
+      return { user: applySession(emailOrUser, passwordOrToken, undefined) };
+    }
+    if (typeof emailOrUser === 'object') {
+      return { user: applySession(emailOrUser, passwordOrToken, maybeRefresh) };
+    }
+    const res = await api.post('/auth/login', { email: String(emailOrUser || '').trim().toLowerCase(), password: passwordOrToken });
+    const { user: u, tokens } = res.data || {};
+    applySession(u, tokens?.accessToken, tokens?.refreshToken);
+    return res.data;
   };
 
   const register = async (userData) => {
-    const res = await fetch('http://localhost:5000/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData)
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Registration failed');
-    
-    localStorage.setItem('token', data.token);
-    setUser(data.user);
-    return data;
+    const res = await api.post('/auth/register', userData);
+    return res.data;
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-  };
+  const logout = () => clearSession();
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, isOwner, isRenter, login, loginWithCredentials, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isAdmin, isOwner, isRenter, login, loginWithCredentials, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// 👈 Add and export useAuth so Login.jsx and AdminDashboard.jsx can use it
 export const useAuth = () => useContext(AuthContext);

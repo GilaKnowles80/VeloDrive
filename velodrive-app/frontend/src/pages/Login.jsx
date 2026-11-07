@@ -26,10 +26,10 @@ const Login = () => {
         password: formData.password,
       });
       const { user, tokens } = response.data;
-      const userWithoutPassword = { ...user };
-      delete userWithoutPassword.password;
-      login(userWithoutPassword, tokens.accessToken, tokens.refreshToken);
-      navigate('/');
+      login(user, tokens.accessToken, tokens.refreshToken);
+      if (user?.role === 'admin') navigate('/admin/dashboard');
+      else if (user?.role === 'owner') navigate('/owner/dashboard');
+      else navigate('/renter/dashboard');
     } catch (err) {
       const msg = err.response?.data?.message || 'Login failed';
       setError(msg);
@@ -51,10 +51,10 @@ const Login = () => {
       });
       const { user, tokens } = res.data;
       if (user && tokens) {
-        const userWithoutPassword = { ...user };
-        delete userWithoutPassword.password;
-        login(userWithoutPassword, tokens.accessToken, tokens.refreshToken);
-        navigate('/');
+        login(user, tokens.accessToken, tokens.refreshToken);
+        if (user?.role === 'admin') navigate('/admin/dashboard');
+        else if (user?.role === 'owner') navigate('/owner/dashboard');
+        else navigate('/renter/dashboard');
         return;
       }
       setMessage('Email verified. Please sign in.');

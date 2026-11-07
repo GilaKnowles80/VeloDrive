@@ -12,8 +12,10 @@ const Register = () => {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const { loginWithCredentials } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
+
+  const dashboardFor = (role) => (role === 'admin' ? '/admin/dashboard' : role === 'owner' ? '/owner/dashboard' : '/renter/dashboard');
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
@@ -66,16 +68,16 @@ const Register = () => {
     setMessage('');
     try {
       const res = await api.post('/auth/verify-otp', {
-        email: formData.email,
-        otp
+        email: formData.email.trim().toLowerCase(),
+        otp: String(otp || '').trim(),
       });
-      const data = res.data;
-
-      if (data.tokens) {
-        await loginWithCredentials(data.user, data.tokens.accessToken, data.tokens.refreshToken);
+      const data = res.data || {};
+      if (data.user && data.tokens) {
+        login(data.user, data.tokens.accessToken, data.tokens.refreshToken);
+        navigate(dashboardFor(data.user.role));
+        return;
       }
-
-      navigate('/');
+      setMessage('Email verified. Please sign in.');
     } catch (err) {
       setError(err.response?.data?.message || 'OTP verification failed');
     }
