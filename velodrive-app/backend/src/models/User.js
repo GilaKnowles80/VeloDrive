@@ -59,6 +59,14 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
+  otpCode: {
+    type: DataTypes.STRING(10),
+    allowNull: true
+  },
+  otpExpires: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
   isKycVerified: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
