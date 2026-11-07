@@ -5,6 +5,40 @@ const { protect, authorize } = require('../middleware/auth');
 const { processSplitPayment, processOwnerSubscription, refundPayment } = require('../services/paypalService');
 const { Booking, Transaction, User } = require('../models');
 
+// Resend sends Svix-signed webhooks. Capture raw body for signature verification.
+router.use('/resend', express.raw({ type: '*/*', limit: '1mb' }));
+
+const verifyResendSignature = (req, res, next) => {
+  const secret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!secret) return res.status(503).json({ success: false, message: 'Resend webhook secret not configured' });
+  const id = req.headers['svix-id'];
+  const timestamp = req.headers['svix-timestamp'];
+  const signature = req.headers['svix-signature'];
+  if (!id || !timestamp || !signature) return res.status(401).json({ success: false, message: 'Missing Svix signature headers' });
+  try {
+    const payload = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : JSON.stringify(req.body || {});
+    const toSign = `${id}.${timestamp}.${payload}`;
+    const secretBytes = Buffer.from(String(secret).replace(/^whsec_/, ''), 'base64');
+    const expected = crypto.createHmac('sha256', secretBytes).update(toSign).digest('base64');
+    const ok = String(signature).split(' ').some((part) => {
+      const [v, sig] = part.split(',', 2);
+      return v === 'v1' && sig === expected;
+    });
+    if (!ok) return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
+    req.resendEvent = JSON.parse(payload);
+    next();
+  } catch (e) {
+    return res.status(400).json({ success: false, message: 'Invalid webhook payload' });
+  }
+};
+
+router.post('/resend', verifyResendSignature, async (req, res) => {
+  // Acknowledge events (contact.* / email.*) for observability; no state mutation required.
+  const evt = req.resendEvent || {};
+  console.log(JSON.stringify({ level: 'info', msg: 'resend_webhook', type: evt.type, id: evt.id }));
+  res.json({ success: true, received: true });
+});
+
 /**
  * Verify PayPal webhook signature
  */
