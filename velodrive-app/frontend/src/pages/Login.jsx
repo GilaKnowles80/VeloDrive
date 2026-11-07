@@ -110,6 +110,7 @@ const Login = () => {
               <input
                 type="email"
                 name="email"
+                autoComplete="username email"
                 className="input-field pl-10"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -125,6 +126,7 @@ const Login = () => {
               <input
                 type="password"
                 name="password"
+                autoComplete="current-password"
                 className="input-field pl-10"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -151,6 +153,8 @@ const Login = () => {
                 <KeyRound className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
+                  name="otp"
+                  autoComplete="one-time-code"
                   inputMode="numeric"
                   maxLength={6}
                   className="input-field pl-10 tracking-widest"
