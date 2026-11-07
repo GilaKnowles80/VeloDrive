@@ -53,7 +53,7 @@ app.use(morgan(process.env.NODE_ENV === 'production'
 
 // Security & middleware
 app.use(helmet());
-const allowedOrigins = (process.env.FRONTEND_URL || 'https://frontend-2o4j.vercel.app,http://localhost:3000')
+const allowedOrigins = (process.env.FRONTEND_URL || 'https://www.gctravelandtour.com,https://frontend-2o4j.vercel.app,http://localhost:3000')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);

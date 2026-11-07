@@ -1,4 +1,4 @@
-﻿# VeloDrive - All Vehicle Rental Marketplace
+# VeloDrive - All Vehicle Rental Marketplace
 
 A complete vehicle rental platform supporting all vehicle types (motorcycle, cars, vans, SUV, sedan, coupe, hatchback, pickup, off-road, sport, micro, convertible, wagon, crossover, muscle, roadster, cabriolet, limousine, formula 1, mini van, liftback, 10-wheeler trucks, trailer trucks, dump trucks, wheel loaders, payloaders, boom trucks, cranes, and more).
 
@@ -95,11 +95,11 @@ npm run dev         # Start on http://localhost:3000
 
 | App | Vercel project | Canonical URL | Run Vercel CLI from | Link command |
 |---|---|---|---|---|
-| **Frontend** | `frontend-2o4j` | https://frontend-2o4j.vercel.app | `velodrive-app/frontend` | `vercel link --yes --project frontend-2o4j` |
+| **Frontend** | `frontend-2o4j` | https://www.gctravelandtour.com (alias: https://frontend-2o4j.vercel.app) | `velodrive-app/frontend` | `vercel link --yes --project frontend-2o4j` |
 | **Backend** | `velo-drive-lj7t` | https://velo-drive-lj7t.vercel.app | `velodrive-app/backend` | `vercel link --yes --project velo-drive-lj7t` |
 
 - **Never** run `vercel link` or `vercel deploy` from repo root (`C:\Users\Gila\VeloDrive`) or `velodrive-app/` root. Only the two app folders above may contain `.vercel/project.json`.
-- Frontend API proxy: `frontend/vercel.json` rewrites `/api/*` → `https://velo-drive-lj7t.vercel.app/api/$1` (canonical backend). Keep this in sync with the backend project.
+- Frontend API proxy: `frontend/vercel.json` rewrites `/api/*` to `https://velo-drive-lj7t.vercel.app/api/$1` (canonical backend). Keep this in sync with the backend project.
 - **Neon (database):** use **one** Neon project/branch connection string. Set the same `DATABASE_URL` in Vercel for the **backend** project (`velo-drive-lj7t`) and in local `backend/.env` (gitignored). Do not create parallel Neon connection strings for other Vercel projects.
 - Vercel dashboard links you shared (deployment views): Frontend https://vercel.com/gilaknowles80/frontend-2o4j/7pj3VHhzcgaMYaJVbEatbBZy7pWr — Backend https://vercel.com/gilaknowles80/velo-drive-lj7t/9tR2BRMRj1PGw2L1mHGx5QSxUTVm
 
@@ -111,7 +111,7 @@ npm run dev         # Start on http://localhost:3000
 2. Vercel project: **`velo-drive-lj7t`** (backend). Link only from `velodrive-app/backend`.
 3. Add environment variables in Vercel (`velo-drive-lj7t`):
    - `DATABASE_URL` (single Neon connection string)
-   - `JWT_SECRET`, `FRONTEND_URL` (set to `https://frontend-2o4j.vercel.app`)
+   - `JWT_SECRET`, `FRONTEND_URL` (set to `https://www.gctravelandtour.com` in production; comma-list additional allowed origins if needed)
    - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
    - `SENDGRID_API_KEY`, `FROM_EMAIL`
 4. Deploy: `cd velodrive-app/backend && vercel --prod --yes`
