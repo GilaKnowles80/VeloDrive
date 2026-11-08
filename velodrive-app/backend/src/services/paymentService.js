@@ -1,37 +1,38 @@
-const { Wallet, Transaction, User, Booking } = require('../models');
-const { creditWallet, debitWallet, processBookingEscrow, releaseEscrowToOwner, refundBooking } = require('./walletService');
-
-/**
- * Calculate booking split payment amounts
- * total = basePrice + fuel + damage + delay + additional
- * Admin service charge = Php 250 flat (deducted from renter's payment)
- * Owner payout = totalAmount - serviceChargeAmount
- */
-const calculateBookingAmounts = (basePrice, serviceChargeFlatFee = 250) => {
-  const serviceChargeAmount = parseFloat(serviceChargeFlatFee.toFixed(2));
-  const ownerPayout = parseFloat((basePrice - serviceChargeAmount).toFixed(2));
-  return { basePrice, serviceChargeAmount, ownerPayout };
-};
-
-/**
- * Simulate payment processing (kept for backward compatibility; real flow uses PayPal order creation route)
- */
-const processPayment = async (paymentMethod, amount, userId) => {
-  return {
-    success: true,
-    transactionId: `PAY-${Date.now()}`,
-    method: paymentMethod,
-    amount,
-    status: 'completed'
-  };
-};
-
-module.exports = {
-  calculateBookingAmounts,
-  processPayment,
+const { getOrCreateWallet, applyDelta, creditWallet, debitWallet } = require('./walletService');
+const {
   processBookingEscrow,
   releaseEscrowToOwner,
   refundBooking,
+  chargeRenterExtras,
+} = require('./escrowService');
+
+/**
+ * Pricing rules for a booking (documented marketplace model):
+ *   renter pays the rental amount
+ *   admin keeps a flat service charge
+ *   owner receives rental amount - service charge
+ */
+const SERVICE_CHARGE_FLAT = 250;
+
+const calculateBookingAmounts = (basePrice, serviceChargeFlatFee = SERVICE_CHARGE_FLAT) => {
+  const gross = Number(basePrice);
+  if (!Number.isFinite(gross) || gross <= 0) throw new Error('Invalid booking amount');
+
+  const serviceChargeAmount = Number(Number(serviceChargeFlatFee).toFixed(2));
+  const ownerPayout = Number((gross - serviceChargeAmount).toFixed(2));
+
+  return { basePrice: gross, serviceChargeAmount, ownerPayout };
+};
+
+module.exports = {
+  SERVICE_CHARGE_FLAT,
+  calculateBookingAmounts,
+  getOrCreateWallet,
+  applyDelta,
   creditWallet,
-  debitWallet
+  debitWallet,
+  processBookingEscrow,
+  releaseEscrowToOwner,
+  refundBooking,
+  chargeRenterExtras,
 };

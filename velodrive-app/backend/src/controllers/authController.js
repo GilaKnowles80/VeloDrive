@@ -14,8 +14,9 @@ const register = async (req, res) => {
     const { role, firstName, lastName, password, phone, address, gdprConsent } = req.body;
     const email = String(req.body?.email || '').trim().toLowerCase();
 
-    if (!['admin', 'owner', 'renter'].includes(role)) {
-      return res.status(400).json({ success: false, message: 'Invalid role' });
+    // Admin accounts are provisioned by the seed script, never by public sign-up.
+    if (!['owner', 'renter'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role. Choose owner or renter.' });
     }
 
     const missing = ['firstName', 'lastName', 'email', 'password', 'phone', 'address']
@@ -156,6 +157,10 @@ const login = async (req, res) => {
 
     if (user.dataDeletedAt) {
       return res.status(403).json({ success: false, message: 'Account data has been erased' });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ success: false, message: 'This account has been suspended. Contact VeloDrive support.' });
     }
 
     if (!user.isEmailVerified) {

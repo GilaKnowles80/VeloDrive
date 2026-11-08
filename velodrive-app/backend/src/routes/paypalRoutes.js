@@ -4,13 +4,14 @@ const { protect, authorize } = require('../middleware/auth');
 const { capturePayPalOrder, getPayPalOrder } = require('../controllers/paypalController');
 
 /**
- * Capture a PayPal order after buyer approval
- * POST /api/paypal/capture
+ * Capture a PayPal order after buyer approval.
+ * This is the step that turns an approved checkout into held escrow funds.
+ * POST /api/paypal/capture  { bookingId, orderId? }
  */
-router.post('/capture', protect, authorize('renter'), capturePayPalOrder);
+router.post('/capture', protect, authorize('renter', 'admin'), capturePayPalOrder);
 
 /**
- * Get PayPal order details
+ * Read an order's status from PayPal.
  * GET /api/paypal/order/:orderId
  */
 router.get('/order/:orderId', protect, getPayPalOrder);

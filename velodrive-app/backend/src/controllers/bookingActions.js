@@ -1,14 +1,29 @@
-const { Booking, User } = require('../models');
-const { releaseEscrowToOwner, refundBooking, debitWallet } = require('../services/paymentService');
+const { Booking } = require('../models');
+const {
+  releaseEscrowToOwner,
+  refundBooking,
+  chargeRenterExtras,
+} = require('../services/paymentService');
+
+const findBooking = async (id) => Booking.findByPk(id);
+
+const denyUnlessOwnerOrAdmin = (booking, user) =>
+  booking.ownerId === user.id || user.role === 'admin';
 
 const confirmBooking = async (req, res) => {
   try {
-    const booking = await Booking.findByPk(req.params.id);
+    const booking = await findBooking(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-    if (booking.ownerId !== req.user.id) return res.status(403).json({ success: false, message: 'Not authorized' });
+    if (!denyUnlessOwnerOrAdmin(booking, req.user)) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+    if (booking.status !== 'pending') {
+      return res.status(409).json({ success: false, message: `Cannot confirm a booking that is ${booking.status}` });
+    }
 
     booking.status = 'confirmed';
     await booking.save();
+
     res.json({ success: true, message: 'Booking confirmed', booking });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -17,49 +32,74 @@ const confirmBooking = async (req, res) => {
 
 const startRental = async (req, res) => {
   try {
-    const booking = await Booking.findByPk(req.params.id);
+    const booking = await findBooking(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-    if (booking.ownerId !== req.user.id) return res.status(403).json({ success: false, message: 'Not authorized' });
+    if (!denyUnlessOwnerOrAdmin(booking, req.user)) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+    if (booking.status !== 'confirmed') {
+      return res.status(409).json({ success: false, message: `Cannot start a booking that is ${booking.status}` });
+    }
+    if (!['held_in_escrow', 'released_to_owner'].includes(booking.paymentStatus)) {
+      return res.status(409).json({ success: false, message: 'Payment has not been received for this booking' });
+    }
 
     booking.status = 'active';
     await booking.save();
+
     res.json({ success: true, message: 'Rental started', booking });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
+const toCharge = (value) => {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0 ? Number(amount.toFixed(2)) : 0;
+};
+
 const completeRental = async (req, res) => {
   try {
-    const { fuelCharged, damageCharged, delayHours, delayCharge, additionalCharges } = req.body;
-    const booking = await Booking.findByPk(req.params.id);
+    const booking = await findBooking(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-    if (booking.ownerId !== req.user.id && req.user.role !== 'admin') {
+    if (!denyUnlessOwnerOrAdmin(booking, req.user)) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
-
-    booking.fuelCharged = fuelCharged || 0;
-    booking.damageCharged = damageCharged || 0;
-    booking.delayHours = delayHours || 0;
-    booking.delayCharge = delayCharge || 0;
-    booking.additionalCharges = additionalCharges || 0;
-    booking.actualReturnDate = new Date();
-    booking.status = 'completed';
-
-    const extraTotal = parseFloat(fuelCharged || 0) + parseFloat(damageCharged || 0) + parseFloat(delayCharge || 0) + parseFloat(additionalCharges || 0);
-    if (extraTotal > 0) {
-      await debitWallet(
-        booking.renterId,
-        extraTotal,
-        'additional_charge',
-        `Extra charges for booking ${booking.bookingReference}`,
-        booking.id
-      );
+    if (booking.status === 'completed') {
+      return res.status(409).json({ success: false, message: 'Booking is already completed' });
+    }
+    if (booking.status !== 'active') {
+      return res.status(409).json({ success: false, message: `Cannot complete a booking that is ${booking.status}` });
     }
 
-    await releaseEscrowToOwner(booking.id);
+    booking.fuelCharged = toCharge(req.body.fuelCharged);
+    booking.damageCharged = toCharge(req.body.damageCharged);
+    booking.delayHours = Number(req.body.delayHours) > 0 ? Number(req.body.delayHours) : 0;
+    booking.delayCharge = toCharge(req.body.delayCharge);
+    booking.additionalCharges = toCharge(req.body.additionalCharges);
+    booking.actualReturnDate = new Date();
+    booking.status = 'completed';
+    await booking.save();
 
-    res.json({ success: true, message: 'Rental completed', booking });
+    const extraTotal = Number(
+      (
+        booking.fuelCharged +
+        booking.damageCharged +
+        booking.delayCharge +
+        booking.additionalCharges
+      ).toFixed(2)
+    );
+    const chargeResult = await chargeRenterExtras(booking, extraTotal);
+    const escrowResult = await releaseEscrowToOwner(booking.id);
+
+    res.json({
+      success: true,
+      message: chargeResult.pending
+        ? 'Rental completed. Extra charges exceed the renter wallet balance and were recorded as outstanding.'
+        : 'Rental completed',
+      booking: escrowResult.booking || booking,
+      extraCharges: { total: extraTotal, ...chargeResult },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -67,17 +107,28 @@ const completeRental = async (req, res) => {
 
 const cancelBooking = async (req, res) => {
   try {
-    const booking = await Booking.findByPk(req.params.id);
+    const booking = await findBooking(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
     if (booking.renterId !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
+    if (['cancelled', 'completed'].includes(booking.status)) {
+      return res.status(409).json({ success: false, message: `Booking is already ${booking.status}` });
+    }
 
-    booking.status = 'cancelled';
-    await refundBooking(booking.id, 'Cancelled by user');
-    res.json({ success: true, message: 'Booking cancelled and refunded' });
+    const reason = req.user.role === 'admin' ? 'Cancelled by admin' : 'Cancelled by renter';
+    const result = await refundBooking(booking.id, reason);
+
+    res.json({
+      success: true,
+      message: result.refunded
+        ? 'Booking cancelled and refunded to your wallet'
+        : 'Booking cancelled. No payment had been captured.',
+      booking: result.booking,
+      refunded: Boolean(result.refunded),
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(409).json({ success: false, message: error.message });
   }
 };
 

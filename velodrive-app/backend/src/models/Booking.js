@@ -67,10 +67,6 @@ const Booking = sequelize.define('Booking', {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false
   },
-  ownerPayout: {
-    type: DataTypes.DECIMAL(12, 2),
-    allowNull: false
-  },
   platformFee: {
     type: DataTypes.DECIMAL(12, 2),
     defaultValue: 0.00
@@ -94,6 +90,11 @@ const Booking = sequelize.define('Booking', {
   },
   paymentMethod: {
     type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  // PayPal order id, persisted so payment can be captured when the buyer returns
+  paypalOrderId: {
+    type: DataTypes.STRING(64),
     allowNull: true
   },
   paymentDate: {

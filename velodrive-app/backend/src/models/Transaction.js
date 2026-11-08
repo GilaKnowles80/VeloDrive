@@ -15,9 +15,11 @@ const Transaction = sequelize.define('Transaction', {
     unique: true
   },
   type: {
+    // Must stay in sync with every value written by services/controllers.
     type: DataTypes.ENUM(
-      'subscription', 'booking_payment', 'commission', 'owner_payout',
-      'refund', 'wallet_topup', 'wallet_withdrawal', 'fuel_charge', 'damage_charge', 'delay_charge'
+      'subscription', 'membership', 'booking_payment', 'service_charge', 'commission',
+      'owner_payout', 'refund', 'wallet_topup', 'wallet_withdrawal',
+      'fuel_charge', 'damage_charge', 'delay_charge', 'additional_charge'
     ),
     allowNull: false
   },

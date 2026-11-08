@@ -188,21 +188,27 @@ const processSplitPayment = async ({
 
     if (!booking) throw new Error('Booking not found');
 
-    // 1. Record Admin Commission
-    await Transaction.create({
-      reference: `PAY-${paypalTransactionId}-ADMIN`,
-      type: 'service_charge',
-      bookingId,
-      amount: adminAmount,
-      status: 'completed',
-      description: `VeloDrive service charge (Php 250) for booking ${booking.bookingReference}`,
-      metadata: {
-        paypalTransactionId,
-        recipient: process.env.PAYPAL_ADMIN_EMAIL,
-        role: 'admin',
-        feeType: 'service_charge'
-      }
-    }, { transaction });
+    const adminUser = await User.findOne({ where: { role: 'admin' }, transaction });
+    if (!adminUser) throw new Error('Admin account not found');
+
+    // 1. Record Admin service charge (platform fee)
+    if (Number(adminAmount) > 0) {
+      await Transaction.create({
+        reference: `PAY-${paypalTransactionId}-ADMIN`,
+        type: 'service_charge',
+        userId: adminUser.id,
+        bookingId,
+        amount: adminAmount,
+        status: 'completed',
+        description: `VeloDrive service charge (Php 250) for booking ${booking.bookingReference}`,
+        metadata: {
+          paypalTransactionId,
+          recipient: process.env.PAYPAL_ADMIN_EMAIL,
+          role: 'admin',
+          feeType: 'service_charge'
+        }
+      }, { transaction });
+    }
 
     // 2. Record Sales Agent Commission (if applicable)
     if (salesAgentId && salesAgentAmount > 0) {
@@ -224,21 +230,23 @@ const processSplitPayment = async ({
     }
 
     // 3. Record Owner Payout
-    await Transaction.create({
-      reference: `PAY-${paypalTransactionId}-OWNER`,
-      type: 'owner_payout',
-      userId: booking.ownerId,
-      bookingId,
-      amount: ownerAmount,
-      status: 'completed',
-      description: `Owner payout for booking ${booking.bookingReference}`,
-      metadata: {
-        paypalTransactionId,
-        recipient: ownerPaypalEmail || booking.owner?.paypalEmail,
-        role: 'owner',
-        feeType: 'payout'
-      }
-    }, { transaction });
+    if (Number(ownerAmount) > 0) {
+      await Transaction.create({
+        reference: `PAY-${paypalTransactionId}-OWNER`,
+        type: 'owner_payout',
+        userId: booking.ownerId,
+        bookingId,
+        amount: ownerAmount,
+        status: 'completed',
+        description: `Owner payout for booking ${booking.bookingReference}`,
+        metadata: {
+          paypalTransactionId,
+          recipient: ownerPaypalEmail || booking.owner?.paypalEmail,
+          role: 'owner',
+          feeType: 'payout'
+        }
+      }, { transaction });
+    }
 
     // 4. Update booking payment status
     booking.paymentStatus = 'paid';
@@ -345,14 +353,95 @@ const refundPayment = async ({ paypalTransactionId, amount, reason }) => {
   }
 };
 
+/**
+ * Create a PayPal order for an e-wallet top-up.
+ * Credited only after capturePayPalPayment succeeds, so funds can never be minted client-side.
+ */
+const createTopupOrder = async ({ userId, amount, currency = 'PHP', returnUrl, cancelUrl }) => {
+  try {
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0) throw new Error('Invalid top-up amount');
+
+    const request = new paypal.orders.OrdersCreateRequest();
+    request.requestBody({
+      intent: 'CAPTURE',
+      purchase_units: [
+        {
+          reference_id: `wallet_${userId}`,
+          description: 'VeloDrive wallet top-up',
+          amount: {
+            currency_code: currency,
+            value: value.toFixed(2),
+            breakdown: {
+              item_total: { currency_code: currency, value: value.toFixed(2) }
+            }
+          },
+          items: [
+            {
+              name: 'VeloDrive Wallet Top-up',
+              unit_amount: { currency_code: currency, value: value.toFixed(2) },
+              quantity: 1
+            }
+          ],
+          payee: { email_address: process.env.PAYPAL_ADMIN_EMAIL }
+        }
+      ],
+      application_context: {
+        return_url: returnUrl,
+        cancel_url: cancelUrl,
+        branding_name: 'VeloDrive',
+        locale: 'en-PH',
+        shipping_preference: 'NO_SHIPPING'
+      }
+    });
+
+    const response = await execPayPal(request);
+    return {
+      success: true,
+      orderId: response.result.id,
+      status: response.result.status,
+      approvalUrl: response.result.links.find((l) => l.rel === 'approve')?.href,
+      amount: value,
+      currency
+    };
+  } catch (error) {
+    console.error(JSON.stringify({ level: 'error', msg: 'paypal_topup_order_error', error: error.message, circuit: paypalCircuit.snapshot() }));
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Fetch a PayPal order for reconciliation (status and captured amounts).
+ */
+const getOrder = async (orderId) => {
+  try {
+    const request = new paypal.orders.OrdersGetRequest(orderId);
+    const response = await execPayPal(request);
+    const unit = response.result.purchase_units?.[0];
+
+    return {
+      success: true,
+      order: {
+        id: response.result.id,
+        status: response.result.status,
+        amount: unit?.amount?.value,
+        currency: unit?.amount?.currency_code,
+        referenceId: unit?.reference_id,
+      },
+    };
+  } catch (error) {
+    console.error(JSON.stringify({ level: 'error', msg: 'paypal_get_order_error', error: error.message }));
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
-  ...module.exports,
+  buildMultiPartyPaymentRequest,
+  createPayPalOrder,
+  capturePayPalPayment,
+  createTopupOrder,
+  getOrder,
   processSplitPayment,
   processOwnerMembership,
   refundPayment
 };
-
-
-
-
-
