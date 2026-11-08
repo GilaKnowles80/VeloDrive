@@ -31,7 +31,7 @@ const seedAdmin = async () => {
       role: 'admin',
       firstName: 'Gila',
       lastName: 'Knowles',
-      email: 'gila.velodrive@gctravelandtour.com',
+      email: 'gilaknowles80@gmail.com',
       password: hashedPassword,
       phone: '+639154401150',
       address: 'VeloDrive Headquarters, Metro Manila, Philippines',
