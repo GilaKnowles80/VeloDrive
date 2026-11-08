@@ -53,9 +53,13 @@ const Login = () => {
       else if (user?.role === 'owner') navigate('/owner/dashboard');
       else navigate('/renter/dashboard');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Login failed';
+      const status = err.response?.status;
+      const data = err.response?.data;
+      const msg = (data && typeof data === 'object' && data.message) ? data.message
+        : (status === 404 || !err.response) ? 'Service unavailable. Please try again in a moment (backend API not reachable).'
+        : 'Login failed';
       setError(msg);
-      if (/verify|otp|verification/i.test(msg)) {
+      if (/verify|otp|verification/i.test(String(msg))) {
         setNeedsVerify(true);
         if (otpExpiresIn <= 0) setOtpExpiresIn(OTP_EXPIRES_SEC);
       }
