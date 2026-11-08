@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, RefreshToken, GDPRConsent, Wallet } = require('../models');
+const { sequelize, User, RefreshToken, GDPRConsent, Wallet } = require('../models');
 const { sendOTPEmail } = require('../services/emailService');
 
 const OTP_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -69,53 +69,58 @@ const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const user = await User.create({
-      role,
-      firstName,
-      lastName,
-      email,
-      password: hashedPassword,
-      phone,
-      address,
-      gdprConsent: gdprConsent === true,
-      gdprConsentDate: gdprConsent === true ? new Date() : null,
-      otpCode: null,
-      otpExpires: null,
-      otpLastSentAt: null,
-      otpSendCount: 0,
-      isEmailVerified: false,
+    const result = await sequelize.transaction(async (t) => {
+      const user = await User.create({
+        role,
+        firstName,
+        lastName,
+        email,
+        password: hashedPassword,
+        phone,
+        address,
+        gdprConsent: gdprConsent === true,
+        gdprConsentDate: gdprConsent === true ? new Date() : null,
+        otpCode: null,
+        otpExpires: null,
+        otpLastSentAt: null,
+        otpSendCount: 0,
+        isEmailVerified: false,
+      }, { transaction: t });
+
+      // Enforce max 3 OTPs per 10 minutes (registration counts as first send)
+      const now = new Date();
+      const quota = consumeOtpSendQuota(user, now);
+      if (!quota.ok) {
+        const err = new Error('OTP_QUOTA');
+        err.status = 429;
+        err.retryAfterSec = quota.retryAfterSec;
+        throw err;
+      }
+      const otpCode = issueOtp(user, now);
+      await user.save({ transaction: t });
+
+      // Create wallet
+      await Wallet.create({ userId: user.id, balance: 0.00 }, { transaction: t });
+
+      // Log GDPR consent
+      if (gdprConsent) {
+        await GDPRConsent.create({
+          userId: user.id,
+          consentType: 'data_processing',
+          isGranted: true,
+          grantedAt: new Date(),
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+          version: '1.0'
+        }, { transaction: t });
+      }
+
+      return { user, otpCode };
     });
 
-    // Enforce max 3 OTPs per 10 minutes (registration counts as first send)
-    const now = new Date();
-    const quota = consumeOtpSendQuota(user, now);
-    if (!quota.ok) {
-      return res.status(429).json({
-        success: false,
-        message: `Too many OTP requests. Try again in ${Math.ceil(quota.retryAfterSec / 60)} minute(s).`,
-        retryAfterSec: quota.retryAfterSec,
-      });
-    }
-    const otpCode = issueOtp(user, now);
-    await user.save();
+    const { user, otpCode } = result;
 
-    // Create wallet
-    await Wallet.create({ userId: user.id, balance: 0.00 });
-
-    // Log GDPR consent
-    if (gdprConsent) {
-      await GDPRConsent.create({
-        userId: user.id,
-        consentType: 'data_processing',
-        isGranted: true,
-        grantedAt: new Date(),
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-        version: '1.0'
-      });
-    }
-
-    // Send OTP email and report delivery status honestly
+    // Send OTP email after commit (external side effect) and report delivery status honestly
     const emailResult = await sendOTPEmail(email, otpCode);
 
     const userResponse = user.toJSON();
@@ -139,6 +144,13 @@ const register = async (req, res) => {
       user: userResponse,
     });
   } catch (error) {
+    if (error.message === 'OTP_QUOTA') {
+      return res.status(429).json({
+        success: false,
+        message: `Too many OTP requests. Try again in ${Math.ceil((error.retryAfterSec || 60) / 60)} minute(s).`,
+        retryAfterSec: error.retryAfterSec,
+      });
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };
