@@ -67,6 +67,17 @@ const User = sequelize.define('User', {
     type: DataTypes.DATE,
     allowNull: true
   },
+  otpLastSentAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Start of current 10-minute OTP send window'
+  },
+  otpSendCount: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    comment: 'OTP sends in current 10-minute window (max 3)'
+  },
   isKycVerified: {
     type: DataTypes.BOOLEAN,
     defaultValue: false

@@ -1,7 +1,43 @@
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, RefreshToken, GDPRConsent, Wallet } = require('../models');
 const { sendOTPEmail } = require('../services/emailService');
+
+const OTP_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const OTP_MAX_SENDS = 3;
+const OTP_EXPIRES_MS = 10 * 60 * 1000;
+
+const generateOtpCode = () => String(crypto.randomInt(100000, 1000000));
+
+/**
+ * Enforce max 3 OTP sends per 10-minute window (register + resend).
+ * Returns { ok, retryAfterSec }.
+ */
+const consumeOtpSendQuota = (user, now = new Date()) => {
+  const last = user.otpLastSentAt ? new Date(user.otpLastSentAt) : null;
+  const windowExpired = !last || (now.getTime() - last.getTime()) >= OTP_WINDOW_MS;
+  if (windowExpired) {
+    user.otpSendCount = 0;
+    user.otpLastSentAt = now;
+  }
+  const count = Number(user.otpSendCount || 0);
+  if (count >= OTP_MAX_SENDS) {
+    const windowStart = new Date(user.otpLastSentAt || now).getTime();
+    const retryAfterSec = Math.max(1, Math.ceil((windowStart + OTP_WINDOW_MS - now.getTime()) / 1000));
+    return { ok: false, retryAfterSec };
+  }
+  user.otpSendCount = count + 1;
+  if (!user.otpLastSentAt) user.otpLastSentAt = now;
+  return { ok: true };
+};
+
+const issueOtp = (user, now = new Date()) => {
+  const code = generateOtpCode();
+  user.otpCode = code;
+  user.otpExpires = new Date(now.getTime() + OTP_EXPIRES_MS);
+  return code;
+};
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '15m' });
@@ -33,10 +69,6 @@ const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Generate 6-digit OTP and 10-minute expiry time
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
-
     const user = await User.create({
       role,
       firstName,
@@ -47,10 +79,25 @@ const register = async (req, res) => {
       address,
       gdprConsent: gdprConsent === true,
       gdprConsentDate: gdprConsent === true ? new Date() : null,
-      otpCode,
-      otpExpires,
-      isVerified: false
+      otpCode: null,
+      otpExpires: null,
+      otpLastSentAt: null,
+      otpSendCount: 0,
+      isEmailVerified: false,
     });
+
+    // Enforce max 3 OTPs per 10 minutes (registration counts as first send)
+    const now = new Date();
+    const quota = consumeOtpSendQuota(user, now);
+    if (!quota.ok) {
+      return res.status(429).json({
+        success: false,
+        message: `Too many OTP requests. Try again in ${Math.ceil(quota.retryAfterSec / 60)} minute(s).`,
+        retryAfterSec: quota.retryAfterSec,
+      });
+    }
+    const otpCode = issueOtp(user, now);
+    await user.save();
 
     // Create wallet
     await Wallet.create({ userId: user.id, balance: 0.00 });
@@ -122,6 +169,8 @@ const verifyOTP = async (req, res) => {
     user.isEmailVerified = true;
     user.otpCode = null;
     user.otpExpires = null;
+    user.otpSendCount = 0;
+    user.otpLastSentAt = null;
     await user.save();
 
     const tokens = generateTokens(user.id);
@@ -242,9 +291,16 @@ const resendOTP = async (req, res) => {
     if (!user) return res.json({ success: true, message: 'If the account exists and is unverified, a new code was sent.' });
     if (user.isEmailVerified) return res.status(400).json({ success: false, message: 'Account is already verified. Please log in.' });
 
-    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    user.otpCode = otpCode;
-    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    const now = new Date();
+    const quota = consumeOtpSendQuota(user, now);
+    if (!quota.ok) {
+      return res.status(429).json({
+        success: false,
+        message: `Maximum 3 OTP codes per 10 minutes. Try again in ${Math.ceil(quota.retryAfterSec / 60)} minute(s).`,
+        retryAfterSec: quota.retryAfterSec,
+      });
+    }
+    const otpCode = issueOtp(user, now);
     await user.save();
 
     const emailResult = await sendOTPEmail(email, otpCode);
@@ -258,7 +314,11 @@ const resendOTP = async (req, res) => {
         ...(exposeDevOtp ? { devOtp: otpCode } : {}),
       });
     }
-    res.json({ success: true, message: 'A new verification code was sent to your email.', ...(exposeDevOtp ? { devOtp: otpCode } : {}) });
+    res.json({
+      success: true,
+      message: 'A new verification code was sent to your email. Code expires in 10 minutes (max 3 codes per 10 minutes).',
+      ...(exposeDevOtp ? { devOtp: otpCode } : {}),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
