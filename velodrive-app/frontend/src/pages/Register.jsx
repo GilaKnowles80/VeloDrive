@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+
+const OTP_EXPIRES_SEC = 10 * 60;
+
+const formatCountdown = (s) => {
+  const m = Math.floor(Math.max(0, s) / 60);
+  const sec = Math.max(0, s) % 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
+};
 
 const Register = () => {
   const [step, setStep] = useState('register'); // 'register' or 'verify'
@@ -11,9 +19,24 @@ const Register = () => {
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [otpExpiresIn, setOtpExpiresIn] = useState(0);
+  const [retryAfter, setRetryAfter] = useState(0);
+  const [resending, setResending] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (step !== 'verify' || otpExpiresIn <= 0) return;
+    const t = setInterval(() => setOtpExpiresIn((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [step, otpExpiresIn]);
+
+  useEffect(() => {
+    if (retryAfter <= 0) return;
+    const t = setInterval(() => setRetryAfter((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [retryAfter]);
 
   const dashboardFor = (role) => (role === 'admin' ? '/admin/dashboard' : role === 'owner' ? '/owner/dashboard' : '/renter/dashboard');
 
@@ -40,9 +63,11 @@ const Register = () => {
       if (data.emailSent === false) {
         setError(data.message || 'Account created, but the verification email could not be sent. Use "Resend code".');
       } else {
-        setMessage(data.message || 'Verification code sent to your email!');
+        setMessage((data.message || 'Verification code sent to your email!') + ' Expires in 10 minutes. Max 3 codes per 10 minutes.');
       }
       if (data.devOtp) setOtp(String(data.devOtp));
+      setOtpExpiresIn(OTP_EXPIRES_SEC);
+      setRetryAfter(0);
       setStep('verify');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -50,15 +75,23 @@ const Register = () => {
   };
 
   const handleResendOTP = async () => {
+    if (retryAfter > 0) return;
     setError('');
     setMessage('');
+    setResending(true);
     try {
       const res = await api.post('/auth/resend-otp', { email: formData.email.trim().toLowerCase() });
       const data = res.data || {};
-      setMessage(data.message || 'A new verification code was sent.');
+      setMessage(data.message || 'A new verification code was sent. Expires in 10 minutes.');
       if (data.devOtp) setOtp(String(data.devOtp));
+      setOtpExpiresIn(OTP_EXPIRES_SEC);
+      setRetryAfter(0);
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not resend code. Please try again.');
+      const data = err.response?.data || {};
+      setError(data.message || 'Could not resend code. Please try again.');
+      if (err.response?.status === 429 && data.retryAfterSec) setRetryAfter(Number(data.retryAfterSec) || 0);
+    } finally {
+      setResending(false);
     }
   };
 
@@ -138,9 +171,13 @@ const Register = () => {
         </form>
       ) : (
         <form onSubmit={handleVerifySubmit} className="space-y-4">
-          <p className="text-xs text-slate-500 text-center mb-4">
+          <p className="text-xs text-slate-500 text-center mb-2">
             We've sent a 6-digit verification code to <span className="font-bold text-slate-800">{formData.email}</span>.
           </p>
+          <div className="rounded-xl bg-sky-50 border border-sky-100 px-3 py-2 text-xs text-sky-800 space-y-1">
+            <div>Code expires in <strong>{otpExpiresIn > 0 ? formatCountdown(otpExpiresIn) : '0:00'}</strong> (10 minutes). Use the latest code.</div>
+            <div>Resend limit: <strong>max 3 codes per 10 minutes</strong>.{retryAfter > 0 ? ` Try again in ${formatCountdown(retryAfter)}.` : ''}</div>
+          </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">6-Digit OTP Code</label>
             <input 
@@ -162,8 +199,8 @@ const Register = () => {
           >
             Verify Email
           </button>
-          <button type="button" onClick={handleResendOTP} className="w-full py-2 text-sky-700 font-bold text-sm hover:underline">
-            Resend code
+          <button type="button" onClick={handleResendOTP} disabled={resending || retryAfter > 0} className="w-full py-2 text-sky-700 font-bold text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
+            {resending ? 'Sending...' : retryAfter > 0 ? `Resend available in ${formatCountdown(retryAfter)}` : 'Resend code'}
           </button>
         </form>
       )}

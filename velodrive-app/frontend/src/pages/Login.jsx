@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
-import { Mail, Lock, User as UserIcon, KeyRound } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, KeyRound, Clock } from 'lucide-react';
+
+const OTP_EXPIRES_SEC = 10 * 60;
+
+const formatCountdown = (s) => {
+  const m = Math.floor(Math.max(0, s) / 60);
+  const sec = Math.max(0, s) % 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
+};
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -12,8 +20,22 @@ const Login = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [otpExpiresIn, setOtpExpiresIn] = useState(0);
+  const [retryAfter, setRetryAfter] = useState(0);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (otpExpiresIn <= 0) return;
+    const t = setInterval(() => setOtpExpiresIn((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [otpExpiresIn]);
+
+  useEffect(() => {
+    if (retryAfter <= 0) return;
+    const t = setInterval(() => setRetryAfter((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [retryAfter]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,7 +55,10 @@ const Login = () => {
     } catch (err) {
       const msg = err.response?.data?.message || 'Login failed';
       setError(msg);
-      if (/verify|otp|verification/i.test(msg)) setNeedsVerify(true);
+      if (/verify|otp|verification/i.test(msg)) {
+        setNeedsVerify(true);
+        if (otpExpiresIn <= 0) setOtpExpiresIn(OTP_EXPIRES_SEC);
+      }
     } finally {
       setLoading(false);
     }
@@ -67,15 +92,20 @@ const Login = () => {
   };
 
   const handleResendOtp = async () => {
+    if (retryAfter > 0) return;
     setResending(true);
     setError('');
     setMessage('');
     try {
       const res = await api.post('/auth/resend-otp', { email: formData.email.trim().toLowerCase() });
-      setMessage(res.data?.message || 'A new verification code was sent.');
+      setMessage(res.data?.message || 'A new verification code was sent. Code expires in 10 minutes.');
       setNeedsVerify(true);
+      setOtpExpiresIn(OTP_EXPIRES_SEC);
+      setRetryAfter(0);
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not resend code.');
+      const data = err.response?.data || {};
+      setError(data.message || 'Could not resend code.');
+      if (err.response?.status === 429 && data.retryAfterSec) setRetryAfter(Number(data.retryAfterSec) || 0);
     } finally {
       setResending(false);
     }
@@ -147,6 +177,13 @@ const Login = () => {
         {needsVerify && (
           <form onSubmit={handleVerifyOtp} className="mt-4 space-y-3 border-t border-gray-200 pt-4">
             <p className="text-sm text-gray-700 font-medium">Verify your email to continue</p>
+            <div className="rounded-lg bg-sky-50 border border-sky-100 px-3 py-2 text-xs text-sky-800 space-y-1">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span>Code expires in <strong>{otpExpiresIn > 0 ? formatCountdown(otpExpiresIn) : '0:00'}</strong> (10 minutes). Use the latest code.</span>
+              </div>
+              <div>Resend limit: <strong>max 3 codes per 10 minutes</strong>.{retryAfter > 0 ? ` Try again in ${formatCountdown(retryAfter)}.` : ''}</div>
+            </div>
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">6-Digit OTP Code</label>
               <div className="relative">
@@ -168,8 +205,8 @@ const Login = () => {
             <button type="submit" className="btn-primary w-full disabled:opacity-50" disabled={loading || otp.length < 6}>
               {loading ? 'Verifying...' : 'Verify Email'}
             </button>
-            <button type="button" onClick={handleResendOtp} disabled={resending} className="w-full text-sm text-blue-600 font-medium hover:underline disabled:opacity-50">
-              {resending ? 'Sending...' : 'Resend code'}
+            <button type="button" onClick={handleResendOtp} disabled={resending || retryAfter > 0} className="w-full text-sm text-blue-600 font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
+              {resending ? 'Sending...' : retryAfter > 0 ? `Resend available in ${formatCountdown(retryAfter)}` : 'Resend code'}
             </button>
           </form>
         )}
