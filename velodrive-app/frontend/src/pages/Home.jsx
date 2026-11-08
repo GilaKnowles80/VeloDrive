@@ -15,10 +15,12 @@ const Home = () => (
         <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-2xl mx-auto leading-relaxed">
           VeloDrive: A peer-to-peer (P2P) vehicle rental and ride-hailing hybrid marketplace. It supports both self-drive arrangements and hire-a-driver services, operating on transactional commission or subscription-based monetization logic.
         </p>
-        <div className="flex flex-col md:flex-row gap-4 justify-center">
+        <div className="flex flex-col md:flex-row gap-4 justify-center flex-wrap">
           <Link to="/register?role=owner" className="bg-sky-500 hover:bg-sky-400 text-white px-8 py-3 text-lg rounded-lg font-semibold transition">Vehicles Owner</Link>
           <Link to="/register?role=renter" className="bg-white/10 hover:bg-white/20 text-white px-8 py-3 text-lg rounded-lg border border-white/30 transition">Renter Sign Up</Link>
+          <Link to="/login" className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-8 py-3 text-lg rounded-lg font-semibold transition">Admin Login</Link>
         </div>
+        <p className="mt-4 text-sm text-blue-100/90">Admin access: use your provisioned admin account on the Login page.</p>
       </div>
     </section>
 

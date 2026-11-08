@@ -119,7 +119,7 @@ const Login = () => {
             <UserIcon className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
-          <p className="text-gray-600">Sign in to your VeloDrive account</p>
+          <p className="text-gray-600">Sign in to your VeloDrive account (Admin, Vehicle Owner, or Renter)</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
