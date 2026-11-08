@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import { Car, Calendar, Wallet, Truck } from 'lucide-react';
@@ -96,9 +96,9 @@ const RenterDashboard = () => {
             <h1 className="text-2xl font-bold text-gray-900">Renter Dashboard</h1>
             <p className="text-gray-600">Browse vehicles and manage your rentals</p>
           </div>
-          <span className="mt-4 md:mt-0 px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
-            {user ? `${user.firstName || ''} ${user.lastName || ''}` : 'Guest'}
-          </span>
+          <Link to="/profile" className="mt-4 md:mt-0 px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium hover:bg-blue-200 inline-block" title="Edit your profile">
+            {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Guest'}
+          </Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[

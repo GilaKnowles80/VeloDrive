@@ -78,15 +78,18 @@ const Navbar = () => {
                     </Link>
                   )}
 
+                  <Link to="/profile" className="text-gray-600 hover:text-blue-600 flex items-center gap-2">
+                    <User className="w-4 h-4" /> Profile
+                  </Link>
                   <Link to="/wallet" className="text-gray-600 hover:text-blue-600 flex items-center gap-2">
                     <Wallet className="w-4 h-4" /> Wallet
                   </Link>
                 </div>
 
                 <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                  <span className="text-sm text-gray-600 hidden md:block">
-                    {user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.name || user.email}
-                  </span>
+                  <Link to="/profile" className="text-sm text-gray-600 hidden md:block hover:text-blue-600 font-medium" title="Edit profile">
+                    {user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.name || user.email}
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700 cursor-pointer"

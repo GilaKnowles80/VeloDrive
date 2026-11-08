@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import { Car, Wallet, Calendar, Truck, MapPin, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
 import GPSMap from '../components/GPSMap';
@@ -115,9 +116,9 @@ const OwnerDashboard = () => {
             <h1 className="text-2xl font-bold text-gray-900">Owner Dashboard</h1>
             <p className="text-gray-600">Manage your vehicles, ads, and rentals</p>
           </div>
-          <span className="mt-4 md:mt-0 px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
-            {user ? `${user.firstName || ''} ${user.lastName || ''}` : 'Guest'}
-          </span>
+          <Link to="/profile" className="mt-4 md:mt-0 px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium hover:bg-blue-200 inline-block" title="Edit your profile">
+            {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Guest'}
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

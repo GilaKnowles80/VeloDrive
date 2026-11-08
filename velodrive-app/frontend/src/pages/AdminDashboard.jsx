@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import { Users, Car, Wallet, Clock, MapPin } from 'lucide-react';
@@ -37,9 +38,9 @@ const AdminDashboard = () => {
             <p className="text-gray-600">Monitor all transactions, users, and vehicles</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-4 md:mt-0">
-            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+            <Link to="/profile" className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium hover:bg-blue-200" title="Edit your profile">
               {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Guest'}
-            </span>
+            </Link>
             <a href="/owner/dashboard" className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-xs rounded-lg font-medium hover:border-blue-400 hover:text-blue-600">Vehicle Owners Dashboard</a>
             <a href="/renter/dashboard" className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-xs rounded-lg font-medium hover:border-blue-400 hover:text-blue-600">Renter Dashboard</a>
             <a href="mailto:support.velodrive@gctravelandtour.com" className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg font-medium hover:bg-amber-100">Support</a>
