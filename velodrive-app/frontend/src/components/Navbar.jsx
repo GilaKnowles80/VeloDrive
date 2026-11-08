@@ -46,11 +46,19 @@ const Navbar = () => {
             {user && (
               <>
                 <div className="hidden md:flex items-center gap-6 text-sm">
-                  {/* Admin Dashboard Link */}
+                  {/* Admin Dashboard Links - admin can navigate to all role views */}
                   {isAdmin && (
-                    <Link to="/admin/dashboard" className="text-gray-600 hover:text-blue-600 flex items-center gap-2 font-semibold">
-                      <ShieldAlert className="w-4 h-4 text-blue-600" /> Admin Dashboard
-                    </Link>
+                    <>
+                      <Link to="/admin/dashboard" className="text-gray-600 hover:text-blue-600 flex items-center gap-2 font-semibold">
+                        <ShieldAlert className="w-4 h-4 text-blue-600" /> Admin Dashboard
+                      </Link>
+                      <Link to="/owner/dashboard" className="text-gray-600 hover:text-blue-600 flex items-center gap-2 text-sm">
+                        <User className="w-4 h-4" /> Vehicle Owners
+                      </Link>
+                      <Link to="/renter/dashboard" className="text-gray-600 hover:text-blue-600 flex items-center gap-2 text-sm">
+                        <LayoutDashboard className="w-4 h-4" /> Renter Dashboard
+                      </Link>
+                    </>
                   )}
 
                   {isOwner && (

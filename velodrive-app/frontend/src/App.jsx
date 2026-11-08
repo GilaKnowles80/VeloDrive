@@ -26,13 +26,13 @@ const AdminOnly = ({ children }) => {
 };
 
 const OwnerOnly = ({ children }) => {
-  const { isOwner } = useAuth();
-  return isOwner ? <>{children}</> : <Navigate to="/" replace />;
+  const { isOwner, isAdmin } = useAuth();
+  return (isOwner || isAdmin) ? <>{children}</> : <Navigate to="/" replace />;
 };
 
 const RenterOnly = ({ children }) => {
-  const { isRenter } = useAuth();
-  return isRenter ? <>{children}</> : <Navigate to="/" replace />;
+  const { isRenter, isAdmin } = useAuth();
+  return (isRenter || isAdmin) ? <>{children}</> : <Navigate to="/" replace />;
 };
 
 function App() {
