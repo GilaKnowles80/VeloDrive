@@ -16,7 +16,6 @@ const userRoutes = require('./routes/userRoutes');
 const vehicleRoutes = require('./routes/vehicleRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const walletRoutes = require('./routes/walletRoutes');
-const adminRoutes = require('./routes/adminRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const paypalRoutes = require('./routes/paypalRoutes');
 const ownerRoutes = require('./routes/ownerRoutes');
@@ -131,7 +130,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/wallet', walletRoutes);
-app.use('/api/admin', adminRoutes);
+// Admin API moved out of backend service (frontend/admin portal handles admin UI; do not mount /api/admin here)
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/paypal', paypalRoutes);
 app.use('/api/owners', ownerRoutes);
