@@ -1,6 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "",
-  "framework": null,
-  "installCommand": "npm install"
-}
+  "builds": [{ "src": "api/index.js", "use": "@vercel/node" }],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "api/index.js" },
+    { "src": "/(.*)", "dest": "api/index.js" }
+  ]
+}\n
