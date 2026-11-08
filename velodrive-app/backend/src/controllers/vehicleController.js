@@ -1,6 +1,6 @@
 const { Vehicle, GPSLocation, User } = require('../models');
 
-const OWNER_ATTRS = ['id', 'firstName', 'lastName', 'email', 'phone'];
+const OWNER_ATTRS = ['id', 'firstName', 'lastName', 'email', 'phone', 'address', 'companyName', 'companyAddress', 'contactNumber', 'contactPerson'];
 
 const VEHICLE_TYPES = [
   'motorcycle', 'car', 'van', 'suv', 'sedan', 'coupe', 'hatchback', 'pickup',

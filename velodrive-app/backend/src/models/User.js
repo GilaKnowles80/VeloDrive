@@ -39,6 +39,23 @@ const User = sequelize.define('User', {
     type: DataTypes.TEXT,
     allowNull: false
   },
+  // Vehicle owner business details (shown alongside vehicle listings)
+  companyName: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  companyAddress: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  contactNumber: {
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  contactPerson: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
   nbiClearance: {
     type: DataTypes.STRING(255), // path to uploaded file
     allowNull: true
