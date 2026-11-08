@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
 
 const BookingCancel = () => (
-  <div className="min-h-screen bg-gray-50 py-20 px-4">
+  <div className="page-shell py-20 px-4">
     <div className="max-w-md mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
       <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
         <AlertCircle className="w-8 h-8 text-yellow-600" />

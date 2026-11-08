@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const Terms = () => (
-  <div className="min-h-screen bg-gray-50 py-10 px-4">
+  <div className="page-shell py-10 px-4">
     <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Terms of Service</h1>
       <p className="text-gray-600 leading-relaxed mb-4">

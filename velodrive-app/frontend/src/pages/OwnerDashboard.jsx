@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
@@ -109,7 +109,7 @@ const OwnerDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="page-shell">
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div>

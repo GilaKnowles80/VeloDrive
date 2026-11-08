@@ -7,7 +7,35 @@
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-slate-50 text-gray-900;
+    background-image:
+      radial-gradient(1200px 600px at 10% -10%, rgba(14, 165, 233, 0.12), transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, rgba(37, 99, 235, 0.10), transparent 50%),
+      linear-gradient(180deg, rgba(248, 250, 252, 1) 0%, rgba(241, 245, 249, 1) 100%);
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply min-h-screen relative;
+    background: transparent;
+  }
+  .page-shell::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%230ea5e9' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    z-index: 0;
+  }
+  .page-shell > * { position: relative; z-index: 1; }
+  .auth-shell {
+    @apply min-h-screen flex items-center justify-center px-4 py-10;
+    background:
+      radial-gradient(800px 400px at 20% 20%, rgba(14, 165, 233, 0.18), transparent 55%),
+      radial-gradient(700px 380px at 80% 10%, rgba(37, 99, 235, 0.14), transparent 55%),
+      linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #0ea5e9 120%);
   }
 }
 

@@ -17,7 +17,7 @@ const BookingSuccess = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="page-shell flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -25,7 +25,7 @@ const BookingSuccess = () => {
 
   if (!booking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="page-shell flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900">Booking Not Found</h2>
           <Link to="/" className="btn-primary mt-4">Back to Home</Link>
@@ -35,7 +35,7 @@ const BookingSuccess = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-20 px-4">
+    <div className="page-shell py-20 px-4">
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle className="w-8 h-8 text-green-600" />

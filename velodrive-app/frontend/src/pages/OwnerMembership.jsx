@@ -29,7 +29,7 @@ const OwnerMembership = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
+    <div className="page-shell py-10 px-4">
       <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-8">
         <div className="flex items-center gap-3 mb-6">
           <ShieldCheck className="w-6 h-6 text-blue-600" />

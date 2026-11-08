@@ -117,7 +117,7 @@ const Register = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-8 bg-white border border-slate-200 rounded-2xl shadow-sm">
+    <div className="page-shell py-10 px-4"><div className="max-w-md mx-auto p-8 bg-white/95 backdrop-blur border border-slate-200 rounded-2xl shadow-sm">
       <h2 className="text-2xl font-black text-slate-900 mb-6 text-center">
         {step === 'register' ? 'Create an Account' : 'Enter Verification Code'}
       </h2>
@@ -204,11 +204,11 @@ const Register = () => {
           </button>
         </form>
       )}
-
       <p className="text-xs text-slate-500 text-center mt-6">
         Already have an account? <Link to="/login" className="text-sky-600 font-bold hover:underline">Login here</Link>
       </p>
     </div>
+  </div>
   );
 };
 

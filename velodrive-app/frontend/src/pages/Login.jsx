@@ -112,8 +112,8 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md p-6 bg-white rounded-xl shadow-sm border border-gray-200">
+    <div className="auth-shell">
+      <div className="w-full max-w-md p-6 bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-white/20">
         <div className="text-center mb-8">
           <div className="bg-blue-600 p-3 rounded-lg inline-block mb-4">
             <UserIcon className="w-8 h-8 text-white" />

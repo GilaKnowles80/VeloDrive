@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Car, Truck, Motorcycle, MapPinRight } from 'lucide-react';
 import logo from '../assets/logo.jpg';
@@ -78,7 +78,7 @@ const VehicleTypePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="page-shell">
       <header className="bg-white shadow-sm border-b border-gray-200 sticky z-50 top-0">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">

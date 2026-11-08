@@ -83,7 +83,7 @@ const Profile = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="page-shell">
       <div className="max-w-2xl mx-auto px-4 py-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Profile Settings</h1>
         <p className="text-sm text-gray-600 mb-6">Your registration details are shown below and can be edited.</p>
