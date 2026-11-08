@@ -80,7 +80,7 @@ npm run dev         # Start on http://localhost:5000
 
 Default admin credentials:
 
-- Email: `gctravelandtours2021@gmail.com`
+- Email: `gila.velodrive@gctravelandtour.com`
 - Password: set via `ADMIN_PASSWORD` in `.env` (never commit real passwords)
 
 ### Frontend Setup
