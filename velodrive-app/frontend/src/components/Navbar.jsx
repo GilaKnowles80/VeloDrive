@@ -34,7 +34,7 @@ const Navbar = () => {
 
             {!user && (
               <div className="flex items-center gap-2 flex-wrap justify-end">
-                <Link to="/login" className="text-sm font-medium text-amber-700 hover:text-amber-800 flex items-center gap-2 border border-amber-300 bg-amber-50 px-3 py-1.5 rounded-lg">
+                <Link to="/admin" className="text-sm font-medium text-amber-700 hover:text-amber-800 flex items-center gap-2 border border-amber-300 bg-amber-50 px-3 py-1.5 rounded-lg">
                   <ShieldAlert className="w-4 h-4" /> Admin
                 </Link>
                 <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-blue-600 flex items-center gap-2">

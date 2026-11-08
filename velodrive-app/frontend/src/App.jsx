@@ -6,11 +6,11 @@ import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Home from './pages/Home';
-import Login from './pages/Login';
 import Register from './pages/Register';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminPortal from './pages/AdminPortal';
 import OwnerDashboard from './pages/OwnerDashboard';
 import OwnerMembership from './pages/OwnerMembership';
 import RenterDashboard from './pages/RenterDashboard';
@@ -42,7 +42,8 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/admin" element={<Home />} />
+          <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/register" element={<Register />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />

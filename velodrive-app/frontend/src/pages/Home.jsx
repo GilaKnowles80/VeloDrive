@@ -1,8 +1,13 @@
-﻿import React from 'react';
-import { Link } from 'react-router-dom';
-import { Wallet, Users } from 'lucide-react';
+﻿import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Wallet, Users, Mail, Lock, KeyRound, Clock } from 'lucide-react';
 import logo from '../assets/logo.jpg';
 import VehicleTypesFilter from '../components/VehicleTypesFilter';
+import { useAuth } from '../context/AuthContext';
+import api from '../utils/api';
+
+const OTP_EXPIRES_SEC = 10 * 60;
+const formatCountdown = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.max(0, s) % 60).padStart(2, '0')}`;
 
 const Home = () => (
   <div className="page-shell">
@@ -18,7 +23,7 @@ const Home = () => (
         <div className="flex flex-col md:flex-row gap-4 justify-center flex-wrap">
           <Link to="/register?role=owner" className="bg-sky-500 hover:bg-sky-400 text-white px-8 py-3 text-lg rounded-lg font-semibold transition">Vehicles Owner</Link>
           <Link to="/register?role=renter" className="bg-white/10 hover:bg-white/20 text-white px-8 py-3 text-lg rounded-lg border border-white/30 transition">Renter Sign Up</Link>
-          <Link to="/login" className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-8 py-3 text-lg rounded-lg font-semibold transition">Admin Login</Link>
+          <Link to="/admin" className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-8 py-3 text-lg rounded-lg font-semibold transition">Admin</Link>
         </div>
         <p className="mt-4 text-sm text-blue-100/90">Admin access: use your provisioned admin account on the Login page.</p>
       </div>
