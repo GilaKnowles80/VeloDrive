@@ -7,6 +7,9 @@
   "framework": "vite",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://velo-drive-lj7t.vercel.app/api/$1" },
+    { "source": "/assets/:path*", "destination": "/assets/:path*" },
+    { "source": "/manifest.json", "destination": "/manifest.json" },
+    { "source": "/sw.js", "destination": "/sw.js" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
@@ -22,6 +25,12 @@
       "headers": [
         { "key": "Content-Type", "value": "application/manifest+json" },
         { "key": "Cache-Control", "value": "public, max-age=31536000" }
+      ]
+    },
+    {
+      "source": "/assets/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     }
   ]
