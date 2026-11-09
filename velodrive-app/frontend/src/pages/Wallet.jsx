@@ -14,12 +14,11 @@ const WalletPage = () => {
   const [wallet, setWallet] = useState({ balance: 0, bankAccountName: '', bankAccountNumber: '', bankName: '' });
   const [paymentAccount, setPaymentAccount] = useState({
     bankAccountName: '', bankAccountNumber: '', bankName: '', gcashNumber: '', paymentPreference: '', paypalEmail: '', paypalVerified: false,
-  });
-  const [transactions, setTransactions] = useState([]);
+  });  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [topupMethod, setTopupMethod] = useState('paypal');
-  const [form, setForm] = useState({ amount: '', method: 'paypal', bankName: '', bankAccountName: '', bankAccountNumber: '', gcashNumber: '', paymentPreference: '' });
+  const [form, setForm] = useState({ amount: '', method: 'paypal', bankName: '', bankAccountName: '', bankAccountNumber: '', gcashNumber: '', paymentPreference: '', paypalEmail: '' });
   const [captureLoading, setCaptureLoading] = useState(false);
   const [instructions, setInstructions] = useState(null);
 
@@ -38,7 +37,7 @@ const WalletPage = () => {
 
   useEffect(() => { loadData(); }, []);
 
-  const openTopup = () => { setModal('topup'); setForm({ amount: '', method: 'paypal', bankName: '', bankAccountName: '', bankAccountNumber: '', gcashNumber: '', paymentPreference: '' }); setInstructions(null); };
+  const openTopup = () => { setModal('topup'); setForm({ amount: '', method: 'paypal', bankName: '', bankAccountName: '', bankAccountNumber: '', gcashNumber: '', paymentPreference: '', paypalEmail: '' }); setInstructions(null); };
   const openWithdraw = () => { setModal('withdraw'); setForm({ amount: '' }); };
   const openAccount = () => { setModal('account'); };
   const closeModal = () => setModal(null);
@@ -129,6 +128,7 @@ const WalletPage = () => {
         bankAccountNumber: form.bankAccountNumber || '',
         gcashNumber: form.gcashNumber || '',
         paymentPreference: form.paymentPreference || '',
+        paypalEmail: form.paypalEmail || '',
       });
       if (!resp.data.success) throw new Error(resp.data.message);
       setPaymentAccount(resp.data.account);
@@ -403,6 +403,16 @@ const WalletPage = () => {
                       value={form.gcashNumber || ''}
                       onChange={(e) => setForm({ ...form, gcashNumber: e.target.value })}
                       placeholder="e.g. 09123456789"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">PayPal Email</label>
+                    <input
+                      className="input-field"
+                      type="email"
+                      value={form.paypalEmail || ''}
+                      onChange={(e) => setForm({ ...form, paypalEmail: e.target.value })}
+                      placeholder="e.g. your-email@example.com"
                     />
                   </div>
                   <div className="space-y-2">

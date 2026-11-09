@@ -41,7 +41,7 @@ const capturePaymentHandler = async (req, res) => {
 
 const savePaymentAccountHandler = async (req, res) => {
   try {
-    const { bankAccountName, bankAccountNumber, bankName, gcashNumber, paymentPreference } = req.body;
+    const { bankAccountName, bankAccountNumber, bankName, gcashNumber, paymentPreference, paypalEmail } = req.body;
     const result = await savePaymentAccount({
       userId: req.user.id,
       bankAccountName,
@@ -49,6 +49,7 @@ const savePaymentAccountHandler = async (req, res) => {
       bankName,
       gcashNumber,
       paymentPreference,
+      paypalEmail,
     });
     if (!result.success) {
       return res.status(400).json({ success: false, message: result.error });

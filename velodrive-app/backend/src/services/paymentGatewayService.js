@@ -292,7 +292,7 @@ const capturePayment = async ({ userId, paymentMethod, referenceId, confirmCode 
 /**
  * Save or update user's bank/GCash account details.
  */
-const savePaymentAccount = async ({ userId, bankAccountName, bankAccountNumber, bankName, gcashNumber, paymentPreference }) => {
+const savePaymentAccount = async ({ userId, bankAccountName, bankAccountNumber, bankName, gcashNumber, paymentPreference, paypalEmail }) => {
   const user = await User.findByPk(userId);
   if (!user) {
     return { success: false, error: 'User not found' };
@@ -304,6 +304,7 @@ const savePaymentAccount = async ({ userId, bankAccountName, bankAccountNumber, 
   if (bankName !== undefined) updateData.bankName = bankName || null;
   if (gcashNumber !== undefined) updateData.gcashNumber = gcashNumber || null;
   if (paymentPreference !== undefined) updateData.paymentPreference = paymentPreference || null;
+  if (paypalEmail !== undefined) updateData.paypalEmail = paypalEmail || null;
 
   await user.update(updateData);
 
@@ -327,6 +328,7 @@ const savePaymentAccount = async ({ userId, bankAccountName, bankAccountNumber, 
       bankName: user.bankName,
       gcashNumber: user.gcashNumber,
       paymentPreference: user.paymentPreference,
+      paypalEmail: user.paypalEmail,
     },
   };
 };
