@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+import { Eye, EyeOff } from 'lucide-react';
 
 const OTP_EXPIRES_SEC = 10 * 60;
 
@@ -14,7 +15,7 @@ const formatCountdown = (s) => {
 const Register = () => {
   const [step, setStep] = useState('register'); // 'register' or 'verify'
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', phone: '', address: '', password: '', role: 'renter', gdprConsent: false,
+    firstName: '', lastName: '', email: '', phone: '', address: '', password: '', confirmPassword: '', role: 'renter', gdprConsent: false,
   });
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
@@ -22,6 +23,8 @@ const Register = () => {
   const [otpExpiresIn, setOtpExpiresIn] = useState(0);
   const [retryAfter, setRetryAfter] = useState(0);
   const [resending, setResending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -46,6 +49,10 @@ const Register = () => {
     setMessage('');
     if (!formData.gdprConsent) {
       setError('GDPR consent is required to register.');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Password and Confirm Password do not match.');
       return;
     }
     try {
@@ -151,7 +158,43 @@ const Register = () => {
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
-            <input type="password" autoComplete="new-password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500" />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                required
+                className="w-full px-4 py-2 pl-10 pr-10 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Confirm Password</label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                required
+                className="w-full px-4 py-2 pl-10 pr-10 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Account Role</label>
@@ -205,7 +248,9 @@ const Register = () => {
         </form>
       )}
       <p className="text-xs text-slate-500 text-center mt-6">
-        Already have an account? <Link to="/login" className="text-sky-600 font-bold hover:underline">Login here</Link>
+        Already have an account?{' '}
+        <Link to="/login" className="text-sky-600 font-bold hover:underline">Login here</Link>{' '}
+        | <Link to="/forgot-password" className="text-sky-600 font-bold hover:underline">Forgot Password?</Link>
       </p>
     </div>
   </div>

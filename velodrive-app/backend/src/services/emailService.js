@@ -93,4 +93,86 @@ const sendOTPEmail = async (email, otpCode) => {
   }
 };
 
-module.exports = { sendOTPEmail };
+const buildResetPasswordEmail = (resetUrl) => ({
+  subject: 'VeloDrive - Reset Your Password',
+  text: `You requested a password reset. Click here to reset your password: ${resetUrl}. This link expires in 1 hour.`,
+  html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+      <h2 style="color: #2563eb;">VeloDrive Password Reset</h2>
+      <p>You requested a password reset for your VeloDrive account.</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${resetUrl}" style="background: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
+      </div>
+      <p style="color: #666; font-size: 14px;">This link expires in 1 hour. If you didn't request this, please ignore this email.</p>
+    </div>
+  `,
+});
+
+const sendResetPasswordEmail = async (email, resetUrl) => {
+  try {
+    const result = await emailCircuit.exec(() => retry(async () => {
+      let r = null;
+      if (process.env.RESEND_API_KEY) {
+        const apiKey = process.env.RESEND_API_KEY;
+        const from = process.env.FROM_EMAIL || process.env.EMAIL_FROM || 'VeloDrive <onboarding@resend.dev>';
+        const { subject, text, html } = buildResetPasswordEmail(resetUrl);
+        const resp = await withTimeout(fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from, to: [email], subject, text, html }),
+        }), EMAIL_TIMEOUT_MS, 'resend');
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data?.message || data?.error?.message || `Resend API error ${resp.status}`);
+        r = { provider: 'resend', messageId: data.id };
+      }
+      if (!r) {
+        const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, FROM_EMAIL } = process.env;
+        if (!EMAIL_USER || !EMAIL_PASS) {
+          const e = new Error('No email provider configured.');
+          e.noRetry = true;
+          throw e;
+        }
+        const port = Number(EMAIL_PORT || 587);
+        const secure = port === 465 || String(process.env.EMAIL_SECURE).toLowerCase() === 'true';
+        const transporter = nodemailer.createTransport({
+          host: EMAIL_HOST || 'smtp.gmail.com',
+          port,
+          secure,
+          auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+          connectionTimeout: Math.min(EMAIL_TIMEOUT_MS, 15000),
+          greetingTimeout: 10000,
+          socketTimeout: EMAIL_TIMEOUT_MS,
+        });
+        const { subject, text, html } = buildResetPasswordEmail(resetUrl);
+        const info = await withTimeout(transporter.sendMail({
+          from: `"VeloDrive" <${FROM_EMAIL || EMAIL_USER}>`,
+          to: email,
+          subject,
+          text,
+          html,
+        }), EMAIL_TIMEOUT_MS, 'smtp');
+        r = { provider: 'smtp', messageId: info.messageId };
+      }
+      if (!r) {
+        const e = new Error('No email provider configured. Set RESEND_API_KEY (recommended) or EMAIL_USER/EMAIL_PASS.');
+        e.noRetry = true;
+        throw e;
+      }
+      return r;
+    }, {
+      retries: 2,
+      baseDelayMs: 400,
+      shouldRetry: (err) => !err?.noRetry && err?.code !== 'EAUTH',
+      onRetry: (err, attempt) => console.warn(JSON.stringify({ level: 'warn', msg: 'reset_email_retry', attempt, error: err.message })),
+    }));
+    if (process.env.NODE_ENV !== 'production') console.log(JSON.stringify({ level: 'info', msg: 'reset_email_sent', to: email, provider: result.provider, messageId: result.messageId }));
+    return { success: true, ...result };
+  } catch (error) {
+    const detail = error?.response ? JSON.stringify(error.response) : error.message;
+    console.error(JSON.stringify({ level: 'error', msg: 'reset_email_error', error: detail, circuit: emailCircuit.snapshot() }));
+    if (process.env.NODE_ENV !== 'production') console.warn('[reset][dev-fallback] reset link for', email, 'is', resetUrl);
+    return { success: false, error: error.message || 'Failed to send reset email', detail };
+  }
+};
+
+module.exports = { sendOTPEmail, sendResetPasswordEmail };

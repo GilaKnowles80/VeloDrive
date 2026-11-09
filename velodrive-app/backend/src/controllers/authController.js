@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sequelize, User, RefreshToken, GDPRConsent, Wallet } = require('../models');
-const { sendOTPEmail } = require('../services/emailService');
+const { sendOTPEmail, sendResetPasswordEmail } = require('../services/emailService');
 
 const OTP_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const OTP_MAX_SENDS = 3;
@@ -430,4 +430,91 @@ const resendOTP = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyOTP, resendOTP, login, loginVerifyOTP, refreshToken, logout, getMe };
+const forgotPassword = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.json({ success: true, message: 'If an account exists with this email, a reset link has been sent.' });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ success: false, message: 'This account has been suspended. Contact VeloDrive support.' });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetExpires;
+    await user.save();
+
+    const frontendUrl = (process.env.FRONTEND_URL || '').split(',')[0].trim();
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+    const emailResult = await sendResetPasswordEmail(email, resetUrl);
+    const exposeDevReset = process.env.EXPOSE_DEV_RESET === 'true' && process.env.NODE_ENV !== 'production';
+    if (exposeDevReset) console.warn('[reset][dev] link for', email, 'is', resetUrl);
+
+    if (!emailResult || emailResult.success === false) {
+      return res.status(502).json({
+        success: false,
+        message: 'Could not send reset email. Check email configuration.',
+        emailError: process.env.NODE_ENV === 'production' ? undefined : emailResult?.error,
+        ...(exposeDevReset ? { devResetToken: resetToken, devResetUrl: resetUrl } : {}),
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'If an account exists with this email, a reset link has been sent.',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Reset token is required' });
+    }
+    if (!password || password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
+    const user = await User.findOne({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: { [sequelize.Op.gt]: new Date() },
+      },
+    });
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token. Please request a new one.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    user.password = hashedPassword;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully. You can now sign in with your new password.',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { register, verifyOTP, resendOTP, login, loginVerifyOTP, forgotPassword, resetPassword, refreshToken, logout, getMe };

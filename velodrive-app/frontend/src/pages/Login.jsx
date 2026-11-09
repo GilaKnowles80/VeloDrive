@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
-import { Mail, Lock, User as UserIcon, KeyRound, Clock } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, KeyRound, Clock, Eye, EyeOff } from 'lucide-react';
 
 const OTP_EXPIRES_SEC = 10 * 60;
 
@@ -23,6 +23,7 @@ const Login = () => {
   const [resending, setResending] = useState(false);
   const [otpExpiresIn, setOtpExpiresIn] = useState(0);
   const [retryAfter, setRetryAfter] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -145,6 +146,8 @@ const Login = () => {
     }
   };
 
+  const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
+
   return (
     <div className="auth-shell">
       <div className="w-full max-w-md p-6 bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-white/20">
@@ -188,15 +191,22 @@ const Login = () => {
             <div className="relative">
               <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 name="password"
                 autoComplete="current-password"
-                className="input-field pl-10"
+                className="input-field pl-10 pr-10"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 placeholder="••••••••"
                 required
               />
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
           <button
@@ -206,6 +216,9 @@ const Login = () => {
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
+          <p className="text-center text-sm text-gray-600 mt-2">
+            <Link to="/forgot-password" className="text-blue-600 hover:text-blue-500 font-medium">Forgot Password?</Link>
+          </p>
         </form>
 
         {needsVerify && (
