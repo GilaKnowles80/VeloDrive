@@ -64,13 +64,13 @@ const Home = () => (
             </div>
           </div>
           <div className="card p-8 bg-white/90 backdrop-blur rounded-xl shadow-sm border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Admin Opex Fee (10%)</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Service Charge Fee (10%)</h3>
             <p className="text-gray-600 mb-4">
-              10% Opex fee added to each rental payment receipt. Paid via PayPal at checkout.
+              10% service charge fee added to each rental payment receipt. Paid via PayPal at checkout.
             </p>
             <div className="bg-green-50 p-4 rounded-lg">
               <p className="text-sm text-green-800">
-                Admin receives 10% Opex fee. Vehicle Owner receives net rental amount.
+                Platform receives 10% service charge fee. Vehicle Owner receives net rental amount.
               </p>
             </div>
           </div>

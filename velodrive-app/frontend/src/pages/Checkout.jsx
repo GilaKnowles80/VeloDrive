@@ -65,7 +65,7 @@ const Checkout = () => {
       <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-6 mb-8">
         <h4 className="font-bold text-slate-900 mb-2 text-sm">Escrow & Payment Terms</h4>
         <p className="text-xs text-slate-600 leading-relaxed">
-          Your payment will be held securely in escrow. Upon booking confirmation, a flat ₱250 platform service fee is allocated to admin, and the remaining balance is routed to the vehicle owner.
+          Your payment will be held securely in escrow. Upon booking confirmation, a 10% service charge fee is applied on top of the owner's net amount. The owner receives the net amount and the service charge fee goes to the platform.
         </p>
       </div>
 
