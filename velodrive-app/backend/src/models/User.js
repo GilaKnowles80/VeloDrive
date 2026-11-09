@@ -127,6 +127,14 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(100),
     allowNull: true
   },
+  gcashNumber: {
+    type: DataTypes.STRING(20),
+    allowNull: true
+  },
+  paymentPreference: {
+    type: DataTypes.ENUM('bank', 'gcash', 'paypal'),
+    allowNull: true
+  },
   paypalEmail: {
     type: DataTypes.STRING(255),
     allowNull: true,

@@ -19,6 +19,7 @@ const walletRoutes = require('./routes/walletRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const paypalRoutes = require('./routes/paypalRoutes');
+const paymentsRoutes = require('./routes/paymentsRoutes');
 const ownerRoutes = require('./routes/ownerRoutes');
 
 // Optional Sentry (enable with SENTRY_DSN env var)
@@ -134,6 +135,7 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/paypal', paypalRoutes);
+app.use('/api/payments', paymentsRoutes);
 app.use('/api/owners', ownerRoutes);
 
 // 404 handler

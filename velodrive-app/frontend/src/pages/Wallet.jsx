@@ -1,45 +1,141 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
-import { Wallet, Send, ArrowDown } from 'lucide-react';
+import { Wallet, Send, ArrowDown, Banknote, Smartphone } from 'lucide-react';
+
+const PAYMENT_METHODS = [
+  { id: 'paypal', label: 'PayPal', color: 'bg-blue-500' },
+  { id: 'gcash', label: 'GCash', color: 'bg-green-500' },
+  { id: 'bank_transfer', label: 'Bank Transfer', color: 'bg-indigo-500' },
+];
 
 const WalletPage = () => {
   const { user } = useAuth();
   const [wallet, setWallet] = useState({ balance: 0, bankAccountName: '', bankAccountNumber: '', bankName: '' });
+  const [paymentAccount, setPaymentAccount] = useState({
+    bankAccountName: '', bankAccountNumber: '', bankName: '', gcashNumber: '', paymentPreference: '', paypalEmail: '', paypalVerified: false,
+  });
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
-  const [form, setForm] = useState({ amount: '' });
+  const [topupMethod, setTopupMethod] = useState('paypal');
+  const [form, setForm] = useState({ amount: '', method: 'paypal', bankName: '', bankAccountName: '', bankAccountNumber: '', gcashNumber: '', paymentPreference: '' });
+  const [captureLoading, setCaptureLoading] = useState(false);
+  const [instructions, setInstructions] = useState(null);
 
   const loadData = async () => {
     try {
-      const resp = await api.get('/wallet/');
-      setWallet(resp.data.wallet || {});
-      setTransactions(resp.data.transactions || []);
+      const [walletResp, accountResp] = await Promise.all([
+        api.get('/wallet/'),
+        api.get('/payments/account').catch(() => ({ data: { account: {} } })),
+      ]);
+      setWallet(walletResp.data.wallet || {});
+      setTransactions(walletResp.data.transactions || []);
+      setPaymentAccount(accountResp.data.account || {});
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  const openTopup = () => { setModal('topup'); setForm({ amount: '' }); };
+  const openTopup = () => { setModal('topup'); setForm({ amount: '', method: 'paypal', bankName: '', bankAccountName: '', bankAccountNumber: '', gcashNumber: '', paymentPreference: '' }); setInstructions(null); };
   const openWithdraw = () => { setModal('withdraw'); setForm({ amount: '' }); };
+  const openAccount = () => { setModal('account'); };
   const closeModal = () => setModal(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleTopUp = async (e) => {
+    if (e) e.preventDefault();
+    setCaptureLoading(true);
     try {
-      if (modal === 'topup') {
-        await api.post('/wallet/topup', { amount: form.amount });
-      } else {
-        await api.post('/wallet/withdraw', { amount: form.amount });
+      const resp = await api.post('/payments/create', {
+        amount: form.amount,
+        paymentMethod: form.method,
+      });
+
+      if (!resp.data.success) {
+        if (resp.data.requiresSetup) {
+          setInstructions({ error: resp.data.message, requiresSetup: true });
+          return;
+        }
+        throw new Error(resp.data.message || 'Top-up failed');
       }
+
+      const data = resp.data;
+
+      if (data.paymentMethod === 'paypal' && data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      } else if (data.paymentMethod === 'gcash' || data.paymentMethod === 'bank_transfer') {
+        setInstructions({
+          paymentMethod: data.paymentMethod,
+          reference: data.referenceId,
+          amount: data.amount,
+          instructions: data.instructions,
+          gcashNumber: data.gcashNumber,
+          bankName: data.bankName,
+          bankAccountName: data.bankAccountName,
+          bankAccountNumber: data.bankAccountNumber,
+        });
+        closeModal();
+        loadData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Top-up failed');
+    } finally {
+      setCaptureLoading(false);
+    }
+  };
+
+  const handleCapture = async (e) => {
+    e.preventDefault();
+    setCaptureLoading(true);
+    try {
+      const resp = await api.post('/payments/capture', {
+        paymentMethod: form.method,
+        referenceId: instructions?.reference,
+        confirmCode: e.target.elements.confirmCode?.value || '',
+      });
+
+      if (!resp.data.success) {
+        throw new Error(resp.data.message || 'Verification failed');
+      }
+
+      setInstructions(null);
       closeModal();
       loadData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Transaction failed');
+      alert(err.response?.data?.message || 'Verification failed');
+    } finally {
+      setCaptureLoading(false);
+    }
+  };
+
+  const handleWithdraw = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/wallet/withdraw', { amount: form.amount });
+      closeModal();
+      loadData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Withdrawal failed');
+    }
+  };
+
+  const handleSaveAccount = async (e) => {
+    e.preventDefault();
+    try {
+      const resp = await api.post('/payments/account', {
+        bankName: form.bankName || '',
+        bankAccountName: form.bankAccountName || '',
+        bankAccountNumber: form.bankAccountNumber || '',
+        gcashNumber: form.gcashNumber || '',
+        paymentPreference: form.paymentPreference || '',
+      });
+      if (!resp.data.success) throw new Error(resp.data.message);
+      setPaymentAccount(resp.data.account);
+      closeModal();
+      loadData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save account details');
     }
   };
 
@@ -49,7 +145,7 @@ const WalletPage = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">E-Wallet</h1>
-            <p className="text-gray-600">Connected to your bank account. Withdrawable & refundable.</p>
+            <p className="text-gray-600">Top up via PayPal, GCash, or bank transfer. Withdrawable to your bank account.</p>
           </div>
           <span className="mt-4 md:mt-0 px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
             {user.firstName} {user.lastName}
@@ -74,15 +170,23 @@ const WalletPage = () => {
               <button className="flex-1 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 text-white transition" onClick={openWithdraw}>
                 <Send className="w-4 h-4" /> Withdraw
               </button>
+              <button className="flex-1 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 text-white transition" onClick={openAccount}>
+                <Banknote className="w-4 h-4" /> Account
+              </button>
             </div>
           </div>
 
           <div className="card">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Bank Account</h3>
-            <p className="text-gray-600">{wallet.bankAccountName || 'Not set'}</p>
-            <p className="text-gray-600 text-sm">{wallet.bankAccountNumber || 'Not set'}</p>
-            <p className="text-gray-600 text-sm">{wallet.bankName || 'Not set'}</p>
-            <p className="mt-3 text-xs text-gray-500">Update your bank details in Profile to enable withdrawals.</p>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Payment Account</h3>
+            <div className="space-y-2 text-sm">
+              <p><strong>Bank:</strong> {paymentAccount.bankName || 'Not set'}</p>
+              <p><strong>Account Name:</strong> {paymentAccount.bankAccountName || 'Not set'}</p>
+              <p><strong>Account Number:</strong> {paymentAccount.bankAccountNumber || 'Not set'}</p>
+              <p><strong>GCash Number:</strong> {paymentAccount.gcashNumber || 'Not set'}</p>
+              <p><strong>Preferred Method:</strong> {paymentAccount.paymentPreference || 'Not set'}</p>
+              <p><strong>PayPal Email:</strong> {paymentAccount.paypalEmail || 'Not set'}</p>
+            </div>
+            <p className="mt-3 text-xs text-gray-500">Set your preferred payment method to enable GCash and bank transfer top-ups.</p>
           </div>
 
           <div className="card">
@@ -137,26 +241,190 @@ const WalletPage = () => {
       {modal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-lg">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">{modal === 'topup' ? 'Top Up Wallet' : 'Withdraw to Bank'}</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Amount (PHP)</label>
-                <input
-                  className="input-field"
-                  type="number"
-                  value={form.amount}
-                  onChange={(e) => setForm({...form, amount: e.target.value})}
-                  required
-                />
-                {modal === 'withdraw' && (
-                  <p className="text-xs text-gray-500">Withdrawal sent to your linked bank account.</p>
+            <button type="button" className="absolute right-4 top-4 text-gray-400 hover:text-gray-600" onClick={closeModal}>
+              ×
+            </button>
+
+            {modal === 'topup' && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Top Up Wallet</h2>
+                {!instructions && (
+                  <div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Amount (PHP)</label>
+                      <input
+                        className="input-field"
+                        type="number"
+                        value={form.amount}
+                        onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                        required
+                        min="1"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Payment Method</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {PAYMENT_METHODS.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => setTopupMethod(m.id)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium border transition ${topupMethod === m.id ? `${m.color} text-white border-${m.color.replace('bg-', '')}` : 'bg-gray-50 text-gray-700 border-gray-200'}`}
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {instructions && instructions.requiresSetup && (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                        {instructions.error}
+                      </div>
+                    )}
+                    <div className="flex gap-3">
+                      <button type="button" className="btn-secondary flex-1" onClick={closeModal}>Cancel</button>
+                      <button type="button" className="btn-primary flex-1" onClick={handleTopUp} disabled={captureLoading}>
+                        {captureLoading ? 'Creating...' : 'Continue to Payment'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {instructions && !instructions.requiresSetup && (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800"><strong>Reference:</strong> {instructions.reference}</p>
+                      <p className="text-sm text-blue-800"><strong>Amount:</strong> Php {instructions.amount.toFixed(2)}</p>
+                      <p className="text-sm text-blue-800">{instructions.instructions}</p>
+                    </div>
+                    {instructions.paymentMethod === 'gcash' && (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(instructions.gcashNumber || '');
+                            alert('GCash number copied to clipboard');
+                          }}
+                          className="flex-1 bg-green-100 text-green-700 text-sm px-4 py-2 rounded-lg font-medium"
+                        >
+                          <Smartphone className="w-4 h-4 mr-2" /> Copy GCash Number
+                        </button>
+                      </div>
+                    )}
+                    {instructions.paymentMethod === 'bank_transfer' && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-700"><strong>Bank:</strong> {instructions.bankName}</p>
+                        <p className="text-sm text-gray-700"><strong>Account Name:</strong> {instructions.bankAccountName}</p>
+                        <p className="text-sm text-gray-700"><strong>Account Number:</strong> {instructions.bankAccountNumber}</p>
+                      </div>
+                    )}
+                    <form onSubmit={handleCapture} className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">Confirmation Code (optional)</label>
+                        <input
+                          name="confirmCode"
+                          type="text"
+                          className="input-field"
+                          placeholder="Enter reference or confirmation code"
+                        />
+                      </div>
+                      <button type="submit" className="w-full btn-primary" disabled={captureLoading}>
+                        {captureLoading ? 'Verifying...' : 'I Have Completed the Payment'}
+                      </button>
+                    </form>
+                    <div className="flex gap-3">
+                      <button type="button" className="btn-secondary flex-1" onClick={() => setInstructions(null)}>Back</button>
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="flex gap-3">
-                <button type="button" className="btn-secondary flex-1" onClick={closeModal}>Cancel</button>
-                <button type="submit" className="btn-primary flex-1">{modal === 'topup' ? 'Top Up' : 'Withdraw'}</button>
-              </div>
-            </form>
+            )}
+
+            {modal === 'withdraw' && (
+              <form onSubmit={handleWithdraw} className="space-y-4">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Withdraw to Bank</h2>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Amount (PHP)</label>
+                  <input
+                    className="input-field"
+                    type="number"
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    required
+                    min="1"
+                  />
+                  <p className="text-xs text-gray-500">Withdrawal sent to your linked bank account.</p>
+                </div>
+                <div className="flex gap-3">
+                  <button type="button" className="btn-secondary flex-1" onClick={closeModal}>Cancel</button>
+                  <button type="submit" className="btn-primary flex-1">Withdraw</button>
+                </div>
+              </form>
+            )}
+
+            {modal === 'account' && (
+              <form onSubmit={handleSaveAccount} className="space-y-4">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Payment Account Details</h2>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Bank Name</label>
+                    <input
+                      className="input-field"
+                      type="text"
+                      value={form.bankName || ''}
+                      onChange={(e) => setForm({ ...form, bankName: e.target.value })}
+                      placeholder="e.g. BPI, BDO, Metrobank"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Account Name</label>
+                    <input
+                      className="input-field"
+                      type="text"
+                      value={form.bankAccountName || ''}
+                      onChange={(e) => setForm({ ...form, bankAccountName: e.target.value })}
+                      placeholder="e.g. Juan Dela Cruz"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Account Number</label>
+                    <input
+                      className="input-field"
+                      type="text"
+                      value={form.bankAccountNumber || ''}
+                      onChange={(e) => setForm({ ...form, bankAccountNumber: e.target.value })}
+                      placeholder="e.g. 1234567890"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">GCash Number</label>
+                    <input
+                      className="input-field"
+                      type="text"
+                      value={form.gcashNumber || ''}
+                      onChange={(e) => setForm({ ...form, gcashNumber: e.target.value })}
+                      placeholder="e.g. 09123456789"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Preferred Payment Method</label>
+                    <select
+                      className="input-field"
+                      value={form.paymentPreference || ''}
+                      onChange={(e) => setForm({ ...form, paymentPreference: e.target.value })}
+                    >
+                      <option value="">Select preference</option>
+                      <option value="bank">Bank Transfer</option>
+                      <option value="gcash">GCash</option>
+                      <option value="paypal">PayPal</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button type="button" className="btn-secondary flex-1" onClick={closeModal}>Cancel</button>
+                  <button type="submit" className="btn-primary flex-1">Save Details</button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
