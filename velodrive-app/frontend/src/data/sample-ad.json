@@ -1,0 +1,56 @@
+{
+  "label": "Sample Ad",
+  "note": "Demo vehicle for testing VeloDrive booking/checkout flow. Real owner ads are submitted separately via /owner/dashboard and verified by admin.",
+  "owner": {
+    "email": "sample.owner@velodrive.test",
+    "role": "owner",
+    "companyName": "Sample Vehicle Rentals",
+    "contactPerson": "Sample Owner",
+    "contactNumber": "+639000000000",
+    "address": "Sample Address, Metro Manila, Philippines",
+    "isEmailVerified": true,
+    "isKycVerified": true
+  },
+  "vehicle": {
+    "adCampaignTitle": "Sample Ad — Toyota Vios 2023",
+    "type": "car",
+    "make": "Toyota",
+    "model": "Vios",
+    "year": 2023,
+    "color": "White",
+    "licensePlate": "SAMPLE-001",
+    "vin": "SAMPLEVIN0012023",
+    "pricePerDay": 1500,
+    "pricePerHour": 200,
+    "currency": "PHP",
+    "description": "Sample Ad — Demo vehicle for testing the VeloDrive booking and checkout flow. Clean, well-maintained sedan. Self-drive. Includes basic insurance.",
+    "specifications": {
+      "transmission": "Automatic",
+      "seats": 5,
+      "fuel": "Gasoline",
+      "driveType": "Self-drive"
+    },
+    "images": [
+      "https://via.placeholder.com/400x300/cccccc/000000?text=Sample+Ad+Vehicle"
+    ],
+    "certificates": {
+      "certificateOfRegistration": "https://via.placeholder.com/150/cccccc/000000?text=CR+Sample",
+      "proofOfOwnership": "https://via.placeholder.com/150/cccccc/000000?text=PO+Sample",
+      "originalCertificate": "https://via.placeholder.com/150/cccccc/000000?text=OC+Sample"
+    },
+    "status": "active",
+    "isAvailable": true,
+    "isVerified": true
+  },
+  "testingFlow": [
+    "1. Register as owner at /register (or use an existing owner account)",
+    "2. Verify email OTP, then log in at /login",
+    "3. Pay membership at /owner/membership (Php 499/month or Php 4,999/year)",
+    "4. Submit this sample ad at /owner/dashboard via Vehicle Ad Uploader",
+    "5. Admin verifies the vehicle at /admin/dashboard",
+    "6. Register as renter at /register, then log in",
+    "7. Browse /vehicles, select the Sample Ad, click Book Now",
+    "8. Complete checkout at /renter/dashboard?vehicleId=<id> via PayPal",
+    "9. Confirm booking at /booking-success/:id"
+  ]
+}
