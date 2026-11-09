@@ -217,8 +217,9 @@ const WalletPage = () => {
 
           <div className="card">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Platform Fee Info</h3>
-            <p className="text-gray-600">Owners: Php 1,000/month subscription + 10% commission per booking.</p>
-            <p className="text-gray-600">Renters pay for fuel, damages, and delay charges.</p>
+            <p className="text-gray-600">Owners: Php 499/ monthly Subscription or Php 4,999/ yearly subscription.</p>
+            <p className="text-gray-600">10% Service charge per booking escrow split payment add-on to the owner's net rental payment during renter's checkout payment.</p>
+            <p className="text-gray-600">Renters takes charge for fuel during en-route destination and fuel full tank refund before turning over back to the owner, damages during en-route, and delay charges.</p>
             <p className="text-gray-600">Admin wallet holds escrow and processes refunds.</p>
           </div>
         </div>
