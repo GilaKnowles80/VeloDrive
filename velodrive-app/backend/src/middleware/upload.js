@@ -19,8 +19,20 @@ if (useS3) {
 }
 
 const ensureDir = (dir) => {
-  fs.mkdirSync(dir, { recursive: true });
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (e) {
+    console.error('upload mkdir error:', e.message);
+  }
 };
+
+// Create upload directories at module load time (before any request)
+// Uses absolute paths so they resolve regardless of working directory.
+const uploadsRoot = path.resolve(__dirname, '..', 'uploads');
+ensureDir(uploadsRoot);
+ensureDir(path.resolve(uploadsRoot, 'ads'));
+ensureDir(path.resolve(uploadsRoot, 'documents'));
+ensureDir(path.resolve(uploadsRoot, 'profile'));
 
 const storage = useS3
   ? multerS3({
@@ -36,9 +48,10 @@ const storage = useS3
     })
   : multer.diskStorage({
       destination: (req, file, cb) => {
-        let uploadPath = 'src/uploads/documents';
-        if (req.body.folder === 'ads') uploadPath = 'src/uploads/ads';
-        if (req.body.folder === 'profile') uploadPath = 'src/uploads/profile';
+        let folder = 'documents';
+        if (req.body.folder === 'ads') folder = 'ads';
+        if (req.body.folder === 'profile') folder = 'profile';
+        const uploadPath = path.resolve(uploadsRoot, folder);
         ensureDir(uploadPath);
         cb(null, uploadPath);
       },
