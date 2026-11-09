@@ -32,8 +32,10 @@ const paypalClient = new paypal.core.PayPalHttpClient(
 
 /**
  * Build a PayPal payment request object for booking escrow split
- * Renter pays total → Admin takes 10% Opex fee → Owner receives net amount
- * Owner's PayPal email is the payee; admin Opex goes to PAYPAL_ADMIN_EMAIL via platform_fees
+ * Renter pays total → Admin takes 10% service charge fee → Owner receives net amount
+ * Owner's PayPal email is the payee; admin service charge goes to PAYPAL_ADMIN_EMAIL via platform_fees
+ * platform_fees is omitted when serviceChargeFee is 0 (e.g., owner membership paid directly to admin),
+ * because the live PayPal account is not enabled for platform_fees.
  */
 const buildMultiPartyPaymentRequest = ({
   bookingId,
@@ -50,51 +52,59 @@ const buildMultiPartyPaymentRequest = ({
   const serviceChargeAmount = parseFloat(serviceChargeFee.toFixed(2));
   const ownerNetAmount = parseFloat(basePrice.toFixed(2));
 
+  const purchaseUnit = {
+    reference_id: `booking_${bookingId}`,
+    amount: {
+      currency_code: currency,
+      value: totalAmount.toFixed(2),
+      breakdown: {
+        item_total: {
+          currency_code: currency,
+          value: totalAmount.toFixed(2)
+        }
+      }
+    },
+    items: [
+      {
+        name: `Vehicle Booking ${bookingId}`,
+        unit_amount: {
+          currency_code: currency,
+          value: totalAmount.toFixed(2)
+        },
+        quantity: 1
+      }
+    ],
+    payee: {
+      email_address: ownerPaypalEmail || process.env.PAYPAL_ADMIN_EMAIL
+    }
+  };
+
+  // Only include platform_fees when there is an actual service charge split.
+  // The live PayPal account is not enabled for platform_fees, so omit it for
+  // direct payments (e.g., owner membership paid directly to admin).
+  if (serviceChargeAmount > 0) {
+    purchaseUnit.payment_instruction = {
+      platform_fees: [
+        {
+          amount: {
+            currency_code: currency,
+            value: serviceChargeAmount.toFixed(2)
+          },
+          type: 'SERVICE_CHARGE_FEE',
+          description: 'VeloDrive service charge fee (10%)',
+          payee: {
+            email_address: process.env.PAYPAL_ADMIN_EMAIL
+          }
+        }
+      ]
+    };
+  }
+
   const request = new paypal.orders.OrdersCreateRequest();
   request.requestBody({
     intent: 'CAPTURE',
     purchase_units: [
-      {
-        reference_id: `booking_${bookingId}`,
-        amount: {
-          currency_code: currency,
-          value: totalAmount.toFixed(2),
-          breakdown: {
-            item_total: {
-              currency_code: currency,
-              value: totalAmount.toFixed(2)
-            }
-          }
-        },
-        items: [
-          {
-            name: `Vehicle Booking ${bookingId}`,
-            unit_amount: {
-              currency_code: currency,
-              value: totalAmount.toFixed(2)
-            },
-            quantity: 1
-          }
-        ],
-        payee: {
-          email_address: ownerPaypalEmail || process.env.PAYPAL_ADMIN_EMAIL
-        },
-        payment_instruction: {
-          platform_fees: [
-            {
-              amount: {
-                currency_code: currency,
-                value: serviceChargeAmount.toFixed(2)
-              },
-              type: 'SERVICE_CHARGE_FEE',
-              description: 'VeloDrive admin Opex fee (10%)',
-              payee: {
-                email_address: process.env.PAYPAL_ADMIN_EMAIL
-              }
-            }
-          ]
-        }
-      }
+      purchaseUnit
     ],
     application_context: {
       return_url: returnUrl,
@@ -122,7 +132,7 @@ const buildMultiPartyPaymentRequest = ({
 
 /**
  * Create PayPal order for booking
- * Payee = owner's PayPal email; platform_fees = admin 10% Opex to admin email
+ * Payee = owner's PayPal email; platform_fees = admin 10% service charge to admin email
  */
 const createPayPalOrder = async (paymentDetails) => {
   try {
