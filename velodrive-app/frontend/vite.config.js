@@ -1,8 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import copy from 'rollup-plugin-copy';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    copy({
+      targets: [
+        { src: 'public/manifest.json', dest: 'dist' },
+        { src: 'public/sw.js', dest: 'dist' },
+      ],
+      hook: 'writeBundle',
+    }),
+  ],
   server: {
     port: 3000,
     proxy: {
