@@ -27,7 +27,7 @@ const RenterDashboard = () => {
   const [paypalApprovalUrl, setPaypalApprovalUrl] = useState(null);
   const [feeBreakdown, setFeeBreakdown] = useState(null);
 
-  const ADMIN_OPEX_PERCENT = 10; // 10% admin Opex fee
+  const SERVICE_CHARGE_FEE = 10; // 10% service charge fee
 
   const computeBreakdown = useCallback(() => {
     if (!bookingForm.vehicleId || !bookingForm.numberOfDays || parseInt(bookingForm.numberOfDays, 10) < 1) {
@@ -41,9 +41,9 @@ const RenterDashboard = () => {
     }
     const days = parseInt(bookingForm.numberOfDays, 10);
     const ownerNetAmount = Number(vehicle.pricePerDay) * days;
-    const adminOpexFee = Number((ownerNetAmount * (ADMIN_OPEX_PERCENT / 100)).toFixed(2));
-    const total = Number((ownerNetAmount + adminOpexFee).toFixed(2));
-    setFeeBreakdown({ ownerNetAmount, adminOpexFee, total, vehicle, days });
+    const serviceChargeFee = Number((ownerNetAmount * (SERVICE_CHARGE_FEE / 100)).toFixed(2));
+    const total = Number((ownerNetAmount + serviceChargeFee).toFixed(2));
+    setFeeBreakdown({ ownerNetAmount, serviceChargeFee, total, vehicle, days });
   }, [bookingForm.vehicleId, bookingForm.numberOfDays, vehicles]);
 
   const handleBookVehicle = async (e) => {
@@ -213,8 +213,8 @@ const RenterDashboard = () => {
                     <span>Php {feeBreakdown.ownerNetAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-700">
-                    <span>Admin Opex Fee (10%)</span>
-                    <span>Php {feeBreakdown.adminOpexFee.toFixed(2)}</span>
+                    <span>Service Charge Fee (10%)</span>
+                    <span>Php {feeBreakdown.serviceChargeFee.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600 border-t border-gray-200 pt-2">
                     <span>Total You Pay</span>
@@ -226,7 +226,7 @@ const RenterDashboard = () => {
                   </div>
                   <div className="flex justify-between text-xs text-gray-500">
                     <span>Paid to Admin (gctravelandtours2021@gmail.com)</span>
-                    <span>Php {feeBreakdown.adminOpexFee.toFixed(2)}</span>
+                    <span>Php {feeBreakdown.serviceChargeFee.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

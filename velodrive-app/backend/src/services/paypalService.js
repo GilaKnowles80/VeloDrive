@@ -40,14 +40,14 @@ const buildMultiPartyPaymentRequest = ({
   ownerId,
   salesAgentId,
   basePrice,
-  adminOpexFee,
+  serviceChargeFee,
   totalAmount,
   currency = 'PHP',
   returnUrl,
   cancelUrl,
   ownerPaypalEmail
 }) => {
-  const adminOpexAmount = parseFloat(adminOpexFee.toFixed(2));
+  const serviceChargeAmount = parseFloat(serviceChargeFee.toFixed(2));
   const ownerNetAmount = parseFloat(basePrice.toFixed(2));
 
   const request = new paypal.orders.OrdersCreateRequest();
@@ -84,9 +84,9 @@ const buildMultiPartyPaymentRequest = ({
             {
               amount: {
                 currency_code: currency,
-                value: adminOpexAmount.toFixed(2)
+                value: serviceChargeAmount.toFixed(2)
               },
-              type: 'OPEX_FEE',
+              type: 'SERVICE_CHARGE_FEE',
               description: 'VeloDrive admin Opex fee (10%)',
               payee: {
                 email_address: process.env.PAYPAL_ADMIN_EMAIL
@@ -111,7 +111,7 @@ const buildMultiPartyPaymentRequest = ({
       bookingId,
       ownerId,
       salesAgentId,
-      adminOpexAmount,
+      serviceChargeAmount,
       ownerNetAmount,
       totalAmount,
       adminPaypalEmail: process.env.PAYPAL_ADMIN_EMAIL,
@@ -173,7 +173,7 @@ const capturePayPalPayment = async (orderId) => {
 const processSplitPayment = async ({
   bookingId,
   paypalTransactionId,
-  adminOpexAmount,
+      serviceChargeAmount,
   ownerNetAmount,
   totalAmount,
   adminPaypalEmail,
@@ -194,21 +194,21 @@ const processSplitPayment = async ({
     const adminUser = await User.findOne({ where: { role: 'admin' }, transaction });
     if (!adminUser) throw new Error('Admin account not found');
 
-    // 1. Record Admin Opex fee (10%) → admin wallet, completed immediately
-    if (Number(adminOpexAmount) > 0) {
+    // 1. Record Service Charge fee (10%) → admin wallet, completed immediately
+    if (Number(serviceChargeAmount) > 0) {
       await Transaction.create({
-        reference: `PAY-${paypalTransactionId}-ADMIN-OPEX`,
+        reference: `PAY-${paypalTransactionId}-SERVICE-CHARGE`,
         type: 'service_charge',
         userId: adminUser.id,
         bookingId,
-        amount: adminOpexAmount,
+        amount: serviceChargeAmount,
         status: 'completed',
-        description: `VeloDrive admin Opex fee (10%) for booking ${booking.bookingReference}`,
+        description: `VeloDrive service charge fee (10%) for booking ${booking.bookingReference}`,
         metadata: {
           paypalTransactionId,
           recipient: process.env.PAYPAL_ADMIN_EMAIL,
           role: 'admin',
-          feeType: 'opex_fee'
+          feeType: 'service_charge_fee'
         }
       }, { transaction });
     }
@@ -264,7 +264,7 @@ const processOwnerMembership = async ({ ownerId, amount = 4999, currency = 'PHP'
       ownerId,
       salesAgentId: null,
       basePrice: amount,
-      adminOpexFee: 0,
+      serviceChargeFee: 0,
       totalAmount: amount,
       currency,
       returnUrl: `${process.env.FRONTEND_URL}/owner/membership?success=1&plan=${billingCycle}`,

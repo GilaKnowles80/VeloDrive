@@ -78,7 +78,7 @@ const runMigrations = async () => {
     // Add serviceChargeAmount and ownerPayout to bookings table
     await sequelize.query(`
       ALTER TABLE bookings 
-      ADD COLUMN IF NOT EXISTS service_charge_amount DECIMAL(12, 2) DEFAULT 250.00,
+      ADD COLUMN IF NOT EXISTS service_charge_fee DECIMAL(12, 2) DEFAULT 250.00,
       ADD COLUMN IF NOT EXISTS owner_payout DECIMAL(12, 2) DEFAULT 0.00;
     `);
     console.log('✅ Added service_charge_amount and owner_payout to bookings table');

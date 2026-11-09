@@ -71,7 +71,7 @@ const createBooking = async (req, res) => {
     }
 
     const rentalAmount = Number(vehicle.pricePerDay) * numberOfDays;
-    const { ownerNetAmount, adminOpexFee, totalAmount, ownerPayout } = calculateBookingAmounts(rentalAmount);
+    const { ownerNetAmount, serviceChargeFee, totalAmount, ownerPayout } = calculateBookingAmounts(rentalAmount);
 
     // Fetch owner's PayPal email for direct payout
     const owner = await User.findByPk(vehicle.ownerId, { attributes: ['id', 'email', 'paypalEmail'] });
@@ -91,11 +91,11 @@ const createBooking = async (req, res) => {
       returnPoint: String(returnPoint).trim(),
       destinationPoint: String(destinationPoint || returnPoint).trim(),
       basePrice: rentalAmount,
-      commissionAmount: adminOpexFee,
-      serviceChargeAmount: adminOpexFee,
+      commissionAmount: serviceChargeFee,
+      serviceChargeAmount: serviceChargeFee,
       ownerPayout,
       ownerNetAmount,
-      adminOpexFee,
+      serviceChargeFee,
       totalAmount,
       currency: vehicle.currency || 'PHP',
       paymentStatus: 'pending',
@@ -109,7 +109,7 @@ const createBooking = async (req, res) => {
       ownerId: vehicle.ownerId,
       salesAgentId: null,
       basePrice: rentalAmount,
-      adminOpexFee,
+      serviceChargeFee,
       totalAmount,
       currency: booking.currency,
       returnUrl: `${frontendUrl}/booking-success/${booking.id}`,
@@ -136,7 +136,7 @@ const createBooking = async (req, res) => {
       amount: totalAmount,
       status: 'pending',
       description: `Payment for booking ${booking.bookingReference}`,
-      metadata: { paypalOrderId: paypalOrder.orderId, provider: 'paypal', adminOpexFee, ownerNetAmount },
+      metadata: { paypalOrderId: paypalOrder.orderId, provider: 'paypal', serviceChargeFee, ownerNetAmount },
     });
 
     res.status(201).json({

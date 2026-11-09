@@ -116,8 +116,8 @@ const Booking = sequelize.define('Booking', {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false
   },
-  // Admin 10% Opex fee charged on top of owner net amount
-  adminOpexFee: {
+  // 10% service charge fee charged on top of owner net amount
+  serviceChargeFee: {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false,
     defaultValue: 0.00

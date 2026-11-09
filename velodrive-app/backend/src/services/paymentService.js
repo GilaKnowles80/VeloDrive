@@ -8,28 +8,26 @@ const {
 
 /**
  * Pricing rules for a booking (marketplace split model):
- *   renter pays: owner net amount + 10% admin Opex fee
- *   admin keeps: 10% Opex fee
+ *   renter pays: owner net amount + 10% service charge fee
+ *   admin keeps: 10% service charge fee
  *   owner receives: net vehicle owner's setup payment
  */
-const SERVICE_CHARGE_FLAT = 250;
-const ADMIN_OPEX_PERCENT = 10; // 10% admin Opex fee
+const SERVICE_CHARGE_FEE = 10; // 10% service charge fee
 
-const calculateBookingAmounts = (basePrice, serviceChargeFlatFee = SERVICE_CHARGE_FLAT) => {
+const calculateBookingAmounts = (basePrice, serviceChargeFlatFee = 0) => {
   const gross = Number(basePrice);
   if (!Number.isFinite(gross) || gross <= 0) throw new Error('Invalid booking amount');
 
   const ownerNetAmount = Number(gross.toFixed(2));
-  const adminOpexFee = Number((gross * (ADMIN_OPEX_PERCENT / 100)).toFixed(2));
-  const totalAmount = Number((ownerNetAmount + adminOpexFee).toFixed(2));
+  const serviceChargeFee = Number((gross * (SERVICE_CHARGE_FEE / 100)).toFixed(2));
+  const totalAmount = Number((ownerNetAmount + serviceChargeFee).toFixed(2));
   const ownerPayout = ownerNetAmount;
 
-  return { basePrice: gross, ownerNetAmount, adminOpexFee, totalAmount, ownerPayout };
+  return { basePrice: gross, ownerNetAmount, serviceChargeFee, totalAmount, ownerPayout };
 };
 
 module.exports = {
-  SERVICE_CHARGE_FLAT,
-  ADMIN_OPEX_PERCENT,
+  SERVICE_CHARGE_FEE,
   calculateBookingAmounts,
   getOrCreateWallet,
   applyDelta,
