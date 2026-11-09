@@ -1,7 +1,7 @@
 {
   "name": "VeloDrive - Vehicle Rental Marketplace",
   "short_name": "VeloDrive",
-  "description": "Rent vehicles from trusted owners. Manage bookings, payments, and wallet on any device.",
+  "description": "Rent vehicles from trusted owners. Manage bookings, payments, and wallet on any device — phone, tablet, laptop, or PC.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -67,6 +67,13 @@
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "VeloDrive mobile view"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "834x1194",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "VeloDrive tablet view"
     },
     {
       "src": "/logo.jpg",
