@@ -54,16 +54,24 @@ const Home = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
           <div className="card p-8 bg-white/90 backdrop-blur rounded-xl shadow-sm border border-gray-200">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Vehicle Owner Membership</h3>
-            <p className="text-gray-600 mb-4">Php 2,500/year one-time subscription fee. Charged once per year when you register as a vehicle owner, regardless of how many vehicles you own.</p>
+            <p className="text-gray-600 mb-4">
+              Php 499/month or Php 4,999/year subscription. Paid once per subscribed period.
+            </p>
             <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-800">Paid via PayPal QR Code, PayPal Payment Link, or PayPal Subscription.</p>
+              <p className="text-sm text-blue-800">
+                Paid via PayPal to gctravelandtours2021@gmail.com.
+              </p>
             </div>
           </div>
           <div className="card p-8 bg-white/90 backdrop-blur rounded-xl shadow-sm border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Service Charge per Booking</h3>
-            <p className="text-gray-600 mb-4">Php 250 flat service charge deducted from each rental payment. Paid via PayPal wallet, QR code, or payment link.</p>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Admin Opex Fee (10%)</h3>
+            <p className="text-gray-600 mb-4">
+              10% Opex fee added to each rental payment receipt. Paid via PayPal at checkout.
+            </p>
             <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-800">Owner receives: Rental amount − Php 250 service charge. Admin receives: Php 250 service charge.</p>
+              <p className="text-sm text-green-800">
+                Admin receives 10% Opex fee. Vehicle Owner receives net rental amount.
+              </p>
             </div>
           </div>
         </div>

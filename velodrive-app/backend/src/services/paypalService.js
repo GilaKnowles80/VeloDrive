@@ -249,11 +249,10 @@ const processSplitPayment = async ({
 };
 
 /**
- * Process Owner One-Time Yearly Membership â†’ Admin
- * Charged once per year when owner registers and becomes a member,
- * regardless of how many vehicles they own.
+ * Process Owner Membership (monthly Php 499 or yearly Php 4,999) â†’ Admin
+ * Charged when owner subscribes. Payee = admin PayPal (gctravelandtours2021@gmail.com).
  */
-const processOwnerMembership = async ({ ownerId, amount = 2500, currency = 'PHP' }) => {
+const processOwnerMembership = async ({ ownerId, amount = 4999, currency = 'PHP', billingCycle = 'yearly' }) => {
   const transaction = await Booking.sequelize.transaction();
   try {
     const owner = await User.findByPk(ownerId, { transaction });
@@ -267,8 +266,9 @@ const processOwnerMembership = async ({ ownerId, amount = 2500, currency = 'PHP'
       basePrice: amount,
       serviceChargeFlatFee: 0,
       currency,
-      returnUrl: `${process.env.FRONTEND_URL}/owner/dashboard?membership=success`,
-      cancelUrl: `${process.env.FRONTEND_URL}/owner/dashboard?membership=cancelled`
+      returnUrl: `${process.env.FRONTEND_URL}/owner/membership?success=1&plan=${billingCycle}`,
+      cancelUrl: `${process.env.FRONTEND_URL}/owner/membership?cancelled=1`,
+      ownerPaypalEmail: process.env.PAYPAL_ADMIN_EMAIL,
     });
 
     if (!membershipResponse.success) {
@@ -277,19 +277,18 @@ const processOwnerMembership = async ({ ownerId, amount = 2500, currency = 'PHP'
 
     await Transaction.create({
       reference: `MEMB-${ownerId}-${Date.now()}`,
-      type: 'subscription',
+      type: 'membership',
       userId: ownerId,
       amount,
       currency,
       status: 'pending',
-      description: `One-time yearly VeloDrive membership fee (Php ${amount})`,
+      description: `VeloDrive membership fee (Php ${amount}) — ${billingCycle}`,
       metadata: {
         paypalOrderId: membershipResponse.orderId,
         role: 'owner',
         feeType: 'membership',
         recipient: process.env.PAYPAL_ADMIN_EMAIL,
-        isOneTime: true,
-        billingCycle: 'yearly'
+        billingCycle,
       }
     }, { transaction });
 
@@ -301,6 +300,7 @@ const processOwnerMembership = async ({ ownerId, amount = 2500, currency = 'PHP'
       approvalUrl: membershipResponse.approvalUrl,
       amount,
       currency,
+      billingCycle,
       recipient: process.env.PAYPAL_ADMIN_EMAIL
     };
   } catch (error) {

@@ -140,7 +140,7 @@ router.post('/payment', verifyWebhookSignature, async (req, res) => {
 });
 
 /**
- * Membership webhook - handles owner one-time yearly Php 2,500 fee
+ * Membership webhook - handles owner membership payment (monthly Php 499 / yearly Php 4,999)
  */
 router.post('/subscription', verifyWebhookSignature, async (req, res) => {
   try {
@@ -157,16 +157,17 @@ router.post('/subscription', verifyWebhookSignature, async (req, res) => {
             reference: `MEMB-PAYPAL-${resource.id}`,
             type: 'membership',
             userId: ownerId,
-            amount: parseFloat(resource.amount.value) || 2500,
+            amount: parseFloat(resource.amount.value) || 4999,
+            currency: resource.amount.currency_code || 'PHP',
             status: 'completed',
-            description: `One-time yearly VeloDrive membership fee (Php 2,500)`,
+            description: `VeloDrive membership fee (Php ${parseFloat(resource.amount.value) || 4999})`,
             metadata: {
               paypalSubscriptionId: resource.id,
               role: 'owner',
               feeType: 'membership',
               recipient: process.env.PAYPAL_ADMIN_EMAIL,
-              isOneTime: true,
-              billingCycle: 'yearly'
+              billingCycle: resource.custom_id?.includes('monthly') ? 'monthly' : 'yearly',
+              isOneTime: false,
             }
           });
         }

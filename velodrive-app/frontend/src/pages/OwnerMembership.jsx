@@ -3,25 +3,37 @@ import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import { ShieldCheck } from 'lucide-react';
 
+const MEMBERSHIP_PLANS = [
+  { id: 'monthly', label: 'Monthly', amount: 499, period: '/month' },
+  { id: 'yearly', label: 'Yearly', amount: 4999, period: '/year' },
+];
+
 const OwnerMembership = () => {
   const [loading, setLoading] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState(null);
   const [message, setMessage] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState('yearly');
+  const [payingPlan, setPayingPlan] = useState(null);
+
+  const plan = MEMBERSHIP_PLANS.find((p) => p.id === selectedPlan);
 
   const handleMembershipPay = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
+    setPayingPlan(selectedPlan);
     try {
-      const resp = await api.post('/api/owners/membership', {
-        amount: 1000,
-        currency: 'PHP'
+      const resp = await api.post('/owners/membership', {
+        amount: plan.amount,
+        currency: 'PHP',
+        billingCycle: selectedPlan,
       });
 
       if (resp.data.success && resp.data.approvalUrl) {
         setPaymentUrl(resp.data.approvalUrl);
       }
     } catch (err) {
+      setPayingPlan(null);
       setMessage(err.response?.data?.message || 'Membership payment failed');
     } finally {
       setLoading(false);
@@ -37,23 +49,50 @@ const OwnerMembership = () => {
         </div>
 
         <div className="bg-blue-50 p-6 rounded-lg mb-8">
-          <h2 className="text-lg font-bold text-gray-900 mb-2">One-Time Yearly Membership</h2>
-          <p className="text-gray-600 mb-4">
-            Pay Php 1,000 once per year to become a VeloDrive member. This charge applies regardless of how many vehicles you own.
+          <h2 className="text-lg font-bold text-gray-900 mb-3">Owner Membership Plans</h2>
+          <p className="text-gray-600 mb-6">
+            Choose your subscription plan. Membership is required to list vehicles on VeloDrive.
           </p>
-          <div className="text-2xl font-bold text-blue-600 mb-4">Php 1,000 / year</div>
-          <p className="text-sm text-gray-500">
-            Payment is processed securely via PayPal. Your membership is valid for 1 year from the payment date.
-          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {MEMBERSHIP_PLANS.map((p) => (
+              <div
+                key={p.id}
+                className={`p-4 rounded-lg border-2 ${
+                  selectedPlan === p.id
+                    ? 'border-blue-600 bg-blue-50'
+                    : 'border-gray-200 bg-white hover:border-gray-400'
+                } cursor-pointer transition`}
+                onClick={() => setSelectedPlan(p.id)}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <span className="font-semibold text-gray-900">{p.label}</span>
+                  <span className="text-sm text-gray-500">{p.period}</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-600">Php {p.amount}</div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {p.id === 'yearly' ? 'Best value — save Php 989/year' : 'Flexible monthly billing'}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="text-sm text-gray-500">
+            Payment is processed securely via PayPal to gctravelandtours2021@gmail.com.
+          </div>
         </div>
 
         <form onSubmit={handleMembershipPay} className="space-y-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium text-gray-700">Selected Plan</span>
+            <span className="text-sm font-bold text-blue-600">
+              {plan.label} — Php {plan.amount}{plan.period}
+            </span>
+          </div>
           <button
             type="submit"
             className="w-full btn-primary py-3 disabled:opacity-50"
-            disabled={loading || paymentUrl}
+            disabled={loading || paymentUrl || payingPlan}
           >
-            {loading ? 'Processing...' : paymentUrl ? 'Payment Ready - Click Below' : 'Pay Membership Fee (Php 1,000)'}
+            {loading ? 'Processing...' : payingPlan ? 'Creating Payment...' : `Pay Membership Fee (Php ${plan.amount})`}
           </button>
 
           {paymentUrl && (
@@ -79,7 +118,7 @@ const OwnerMembership = () => {
 
         <div className="mt-8 pt-6 border-t border-gray-200 text-center">
           <p className="text-sm text-gray-500 mb-2">
-            Already a member? Your membership is valid for 1 year.
+            Already a member? Your membership is valid for your subscribed period.
           </p>
           <Link to="/owner/dashboard" className="text-blue-600 hover:underline text-sm">
             ← Back to Owner Dashboard
