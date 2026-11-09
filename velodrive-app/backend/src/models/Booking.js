@@ -111,6 +111,12 @@ const Booking = sequelize.define('Booking', {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false
   },
+  // Owner add-on fee charged to owner's account at checkout (platform/listing fee)
+  ownerAddOnFee: {
+    type: DataTypes.DECIMAL(12, 2),
+    defaultValue: 0.00,
+    allowNull: false
+  },
   status: {
     type: DataTypes.ENUM(
       'pending', 'confirmed', 'active', 'completed', 'cancelled', 'disputed'

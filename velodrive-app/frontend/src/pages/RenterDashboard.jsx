@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -25,6 +25,29 @@ const RenterDashboard = () => {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [paypalApprovalUrl, setPaypalApprovalUrl] = useState(null);
+  const [feeBreakdown, setFeeBreakdown] = useState(null);
+
+  const OWNER_ADD_ON_FEE = 500;
+  const SERVICE_CHARGE_FLAT = 250;
+
+  const computeBreakdown = useCallback(() => {
+    if (!bookingForm.vehicleId || !bookingForm.numberOfDays || parseInt(bookingForm.numberOfDays, 10) < 1) {
+      setFeeBreakdown(null);
+      return;
+    }
+    const vehicle = vehicles.find((v) => v.id === bookingForm.vehicleId);
+    if (!vehicle) {
+      setFeeBreakdown(null);
+      return;
+    }
+    const days = parseInt(bookingForm.numberOfDays, 10);
+    const rentalAmount = Number(vehicle.pricePerDay) * days;
+    const ownerAddOn = OWNER_ADD_ON_FEE;
+    const serviceCharge = SERVICE_CHARGE_FLAT;
+    const total = rentalAmount + ownerAddOn;
+    const ownerPayout = total - serviceCharge;
+    setFeeBreakdown({ rentalAmount, ownerAddOn, serviceCharge, total, ownerPayout, vehicle });
+  }, [bookingForm.vehicleId, bookingForm.numberOfDays, vehicles]);
 
   const handleBookVehicle = async (e) => {
     e.preventDefault();
@@ -87,7 +110,11 @@ const RenterDashboard = () => {
       }
     };
     load();
-  }, []);
+    }, []);
+
+  useEffect(() => {
+    computeBreakdown();
+  }, [bookingForm.vehicleId, bookingForm.numberOfDays, vehicles, computeBreakdown]);
   return (
     <div className="page-shell">
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -180,6 +207,33 @@ const RenterDashboard = () => {
                 {bookingLoading ? 'Creating PayPal Order...' : 'Book Vehicle'}
               </button>
             </div>
+            {feeBreakdown && (
+              <div className="md:col-span-2 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 className="text-sm font-bold text-gray-900 mb-3">Fee Breakdown</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-gray-700">
+                    <span>Rental (Php {feeBreakdown.vehicle.pricePerDay}/day × {parseInt(bookingForm.numberOfDays, 10)} days)</span>
+                    <span>Php {feeBreakdown.rentalAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-700">
+                    <span>Owner Add-On Fee</span>
+                    <span>Php {feeBreakdown.ownerAddOn.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600 border-t border-gray-200 pt-2">
+                    <span>Total You Pay</span>
+                    <span className="font-bold">Php {feeBreakdown.total.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500 mt-2">
+                    <span>Admin Service Charge</span>
+                    <span>Php {feeBreakdown.serviceCharge.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>Owner Payout (after service charge)</span>
+                    <span>Php {feeBreakdown.ownerPayout.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </form>
           {bookingError && <p className="mt-3 text-sm text-red-600">{bookingError}</p>}
           {paypalApprovalUrl && (

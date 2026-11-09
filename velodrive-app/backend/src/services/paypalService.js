@@ -248,6 +248,26 @@ const processSplitPayment = async ({
       }, { transaction });
     }
 
+    // 4. Record Owner Add-On Fee (charged to owner's account per booking)
+    const bookingData = await Booking.findByPk(bookingId, { transaction });
+    if (bookingData && Number(bookingData.ownerAddOnFee) > 0) {
+      await Transaction.create({
+        reference: `PAY-${paypalTransactionId}-OWNER-ADDON`,
+        type: 'owner_add_on_fee',
+        userId: booking.ownerId,
+        bookingId,
+        amount: bookingData.ownerAddOnFee,
+        status: 'completed',
+        description: `Owner add-on fee for booking ${booking.bookingReference}`,
+        metadata: {
+          paypalTransactionId,
+          recipient: booking.owner?.paypalEmail,
+          role: 'owner',
+          feeType: 'add_on_fee'
+        }
+      }, { transaction });
+    }
+
     // 4. Update booking payment status
     booking.paymentStatus = 'paid';
     booking.escrowStatus = 'released';

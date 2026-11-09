@@ -39,7 +39,17 @@ const WalletPage = () => {
 
   const openTopup = () => { setModal('topup'); setForm({ amount: '', method: 'paypal', bankName: '', bankAccountName: '', bankAccountNumber: '', gcashNumber: '', paymentPreference: '', paypalEmail: '' }); setInstructions(null); };
   const openWithdraw = () => { setModal('withdraw'); setForm({ amount: '' }); };
-  const openAccount = () => { setModal('account'); };
+  const openAccount = () => {
+    setForm({
+      bankName: paymentAccount.bankName || '',
+      bankAccountName: paymentAccount.bankAccountName || '',
+      bankAccountNumber: paymentAccount.bankAccountNumber || '',
+      gcashNumber: paymentAccount.gcashNumber || '',
+      paymentPreference: paymentAccount.paymentPreference || '',
+      paypalEmail: paymentAccount.paypalEmail || '',
+    });
+    setModal('account');
+  };
   const closeModal = () => setModal(null);
 
   const handleTopUp = async (e) => {

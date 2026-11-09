@@ -71,7 +71,7 @@ const createBooking = async (req, res) => {
     }
 
     const rentalAmount = Number(vehicle.pricePerDay) * numberOfDays;
-    const { basePrice, serviceChargeAmount, ownerPayout } = calculateBookingAmounts(rentalAmount);
+    const { basePrice, serviceChargeAmount, ownerPayout, ownerAddOnFee, totalAmount } = calculateBookingAmounts(rentalAmount);
 
     const booking = await Booking.create({
       bookingReference: `VD-${Date.now()}-${Math.round(Math.random() * 1000)}`,
@@ -88,7 +88,8 @@ const createBooking = async (req, res) => {
       commissionAmount: serviceChargeAmount,
       serviceChargeAmount,
       ownerPayout,
-      totalAmount: basePrice,
+      ownerAddOnFee,
+      totalAmount,
       currency: vehicle.currency || 'PHP',
       paymentStatus: 'pending',
       escrowStatus: 'not_held',
@@ -123,10 +124,10 @@ const createBooking = async (req, res) => {
       type: 'booking_payment',
       userId: req.user.id,
       bookingId: booking.id,
-      amount: basePrice,
+      amount: totalAmount,
       status: 'pending',
       description: `Payment for booking ${booking.bookingReference}`,
-      metadata: { paypalOrderId: paypalOrder.orderId, provider: 'paypal' },
+      metadata: { paypalOrderId: paypalOrder.orderId, provider: 'paypal', ownerAddOnFee },
     });
 
     res.status(201).json({
