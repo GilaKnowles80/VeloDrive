@@ -32,7 +32,7 @@ const Document = sequelize.define('Document', {
     allowNull: false
   },
   filePath: {
-    type: DataTypes.STRING(500),
+    type: DataTypes.TEXT,
     allowNull: false
   },
   fileSize: {

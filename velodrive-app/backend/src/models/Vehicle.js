@@ -71,15 +71,15 @@ const Vehicle = sequelize.define('Vehicle', {
   },
   // Original certificates uploaded by owner
   certificateOfRegistration: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.TEXT,
     allowNull: false
   },
   proofOfOwnership: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.TEXT,
     allowNull: false
   },
   originalCertificate: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.TEXT,
     allowNull: false
   },
   // Marketing ad campaign
@@ -92,7 +92,7 @@ const Vehicle = sequelize.define('Vehicle', {
     allowNull: true
   },
   adCampaignImage: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.TEXT,
     allowNull: true
   },
   // 1-10 ad image URLs/paths; used by owner ad uploader
@@ -101,7 +101,7 @@ const Vehicle = sequelize.define('Vehicle', {
     allowNull: true
   },
   adCampaignVideo: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.TEXT,
     allowNull: true
   },
   // GPS tracking
