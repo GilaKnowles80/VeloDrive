@@ -210,7 +210,7 @@ const Login = () => {
               {loading ? 'Verifying...' : 'Verify Email'}
             </button>
             <button type="button" onClick={handleResendOtp} disabled={resending || retryAfter > 0} className="w-full text-sm text-blue-600 font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
-              {resending ? 'Sending...' : retryAfter > 0 ? `Resend available in ${formatCountdown(retryAfter)}` : 'Resend code'}
+              {resending ? 'Sending...' : retryAfter > 0 ? `Send available in ${formatCountdown(retryAfter)}` : 'Send code'}
             </button>
           </form>
         )}

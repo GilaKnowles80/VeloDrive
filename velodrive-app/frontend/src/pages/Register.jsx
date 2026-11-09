@@ -200,7 +200,7 @@ const Register = () => {
             Verify Email
           </button>
           <button type="button" onClick={handleResendOTP} disabled={resending || retryAfter > 0} className="w-full py-2 text-sky-700 font-bold text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
-            {resending ? 'Sending...' : retryAfter > 0 ? `Resend available in ${formatCountdown(retryAfter)}` : 'Resend code'}
+            {resending ? 'Sending...' : retryAfter > 0 ? `Send available in ${formatCountdown(retryAfter)}` : 'Send code'}
           </button>
         </form>
       )}
