@@ -237,6 +237,44 @@ const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    // Admin login requires OTP verification (two-step: password -> OTP -> tokens)
+    if (user.role === 'admin') {
+      const now = new Date();
+      const quota = consumeOtpSendQuota(user, now);
+      if (!quota.ok) {
+        return res.status(429).json({
+          success: false,
+          message: `Maximum 3 OTP codes per 10 minutes. Try again in ${Math.ceil(quota.retryAfterSec / 60)} minute(s).`,
+          retryAfterSec: quota.retryAfterSec,
+        });
+      }
+      const otpCode = issueOtp(user, now);
+      await user.save();
+
+      const emailResult = await sendOTPEmail(email, otpCode);
+      const exposeDevOtp = process.env.EXPOSE_DEV_OTP === 'true' && process.env.NODE_ENV !== 'production';
+      if (exposeDevOtp) console.warn('[otp][admin-login] code for', email, 'is', otpCode);
+      if (!emailResult || emailResult.success === false) {
+        return res.status(502).json({
+          success: false,
+          message: 'Could not send OTP email. Check email configuration.',
+          emailError: process.env.NODE_ENV === 'production' ? undefined : emailResult?.error,
+        });
+      }
+
+      const userResponse = user.toJSON();
+      delete userResponse.password;
+      delete userResponse.otpCode;
+
+      return res.json({
+        success: true,
+        otpRequired: true,
+        message: 'Password correct. An OTP code has been sent to your email. Please enter it to complete admin login.',
+        user: userResponse,
+      });
+    }
+
+    // Owner / Renter: existing flow (tokens immediately)
     const tokens = generateTokens(user.id);
 
     await RefreshToken.destroy({ where: { userId: user.id } });
@@ -252,6 +290,58 @@ const login = async (req, res) => {
     res.json({
       success: true,
       message: 'Login successful',
+      user: userResponse,
+      tokens
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const loginVerifyOTP = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const otp = String(req.body?.otp ?? '').trim();
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP code are required' });
+    }
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.role !== 'admin') {
+      return res.status(400).json({ success: false, message: 'OTP login verification is only available for admin accounts.' });
+    }
+
+    if (!user.otpCode || String(user.otpCode).trim() !== otp || !user.otpExpires || new Date() > new Date(user.otpExpires)) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code. Use the latest code and try Resend code if needed.' });
+    }
+
+    // Clear OTP fields
+    user.otpCode = null;
+    user.otpExpires = null;
+    user.otpSendCount = 0;
+    user.otpLastSentAt = null;
+    await user.save();
+
+    const tokens = generateTokens(user.id);
+
+    await RefreshToken.destroy({ where: { userId: user.id } });
+    await RefreshToken.create({
+      userId: user.id,
+      token: tokens.refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    });
+
+    const userResponse = user.toJSON();
+    delete userResponse.password;
+
+    res.json({
+      success: true,
+      message: 'Admin login successful',
       user: userResponse,
       tokens
     });
@@ -340,4 +430,4 @@ const resendOTP = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyOTP, resendOTP, login, refreshToken, logout, getMe };
+module.exports = { register, verifyOTP, resendOTP, login, loginVerifyOTP, refreshToken, logout, getMe };

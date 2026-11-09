@@ -16,6 +16,7 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [otp, setOtp] = useState('');
   const [needsVerify, setNeedsVerify] = useState(false);
+  const [isAdminOtp, setIsAdminOtp] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,7 +48,14 @@ const Login = () => {
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
       });
-      const { user, tokens } = response.data;
+      const { user, tokens, otpRequired } = response.data;
+      if (otpRequired) {
+        setIsAdminOtp(true);
+        setNeedsVerify(true);
+        setOtpExpiresIn(OTP_EXPIRES_SEC);
+        setMessage(response.data?.message || 'An OTP code has been sent to your email.');
+        return;
+      }
       login(user, tokens.accessToken, tokens.refreshToken);
       if (user?.role === 'admin') navigate('/admin/dashboard');
       else if (user?.role === 'owner') navigate('/owner/dashboard');
@@ -88,8 +96,30 @@ const Login = () => {
       }
       setMessage('Email verified. Please sign in.');
       setNeedsVerify(false);
+      setIsAdminOtp(false);
     } catch (err) {
       setError(err.response?.data?.message || 'OTP verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyAdminOtp = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      const res = await api.post('/auth/login-verify-otp', {
+        email: formData.email.trim().toLowerCase(),
+        otp: otp.trim(),
+      });
+      const { user, tokens } = res.data;
+      login(user, tokens.accessToken, tokens.refreshToken);
+      if (user?.role === 'admin') navigate('/admin/dashboard');
+      else navigate('/renter/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Admin OTP verification failed');
     } finally {
       setLoading(false);
     }
@@ -179,8 +209,10 @@ const Login = () => {
         </form>
 
         {needsVerify && (
-          <form onSubmit={handleVerifyOtp} className="mt-4 space-y-3 border-t border-gray-200 pt-4">
-            <p className="text-sm text-gray-700 font-medium">Verify your email to continue</p>
+          <form onSubmit={isAdminOtp ? handleVerifyAdminOtp : handleVerifyOtp} className="mt-4 space-y-3 border-t border-gray-200 pt-4">
+            <p className="text-sm text-gray-700 font-medium">
+              {isAdminOtp ? 'Admin Two-Step Verification' : 'Verify your email to continue'}
+            </p>
             <div className="rounded-lg bg-sky-50 border border-sky-100 px-3 py-2 text-xs text-sky-800 space-y-1">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
@@ -207,7 +239,7 @@ const Login = () => {
               </div>
             </div>
             <button type="submit" className="btn-primary w-full disabled:opacity-50" disabled={loading || otp.length < 6}>
-              {loading ? 'Verifying...' : 'Verify Email'}
+              {loading ? 'Verifying...' : isAdminOtp ? 'Complete Admin Login' : 'Verify Email'}
             </button>
             <button type="button" onClick={handleResendOtp} disabled={resending || retryAfter > 0} className="w-full text-sm text-blue-600 font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
               {resending ? 'Sending...' : retryAfter > 0 ? `Send available in ${formatCountdown(retryAfter)}` : 'Send code'}
