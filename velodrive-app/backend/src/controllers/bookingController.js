@@ -71,7 +71,13 @@ const createBooking = async (req, res) => {
     }
 
     const rentalAmount = Number(vehicle.pricePerDay) * numberOfDays;
-    const { basePrice, serviceChargeAmount, ownerPayout, ownerAddOnFee, totalAmount } = calculateBookingAmounts(rentalAmount);
+    const { ownerNetAmount, adminOpexFee, totalAmount, ownerPayout } = calculateBookingAmounts(rentalAmount);
+
+    // Fetch owner's PayPal email for direct payout
+    const owner = await User.findByPk(vehicle.ownerId, { attributes: ['id', 'email', 'paypalEmail'] });
+    if (!owner) {
+      return res.status(404).json({ success: false, message: 'Vehicle owner not found' });
+    }
 
     const booking = await Booking.create({
       bookingReference: `VD-${Date.now()}-${Math.round(Math.random() * 1000)}`,
@@ -84,11 +90,12 @@ const createBooking = async (req, res) => {
       pickupPoint: String(pickupPoint).trim(),
       returnPoint: String(returnPoint).trim(),
       destinationPoint: String(destinationPoint || returnPoint).trim(),
-      basePrice,
-      commissionAmount: serviceChargeAmount,
-      serviceChargeAmount,
+      basePrice: rentalAmount,
+      commissionAmount: adminOpexFee,
+      serviceChargeAmount: adminOpexFee,
       ownerPayout,
-      ownerAddOnFee,
+      ownerNetAmount,
+      adminOpexFee,
       totalAmount,
       currency: vehicle.currency || 'PHP',
       paymentStatus: 'pending',
@@ -101,11 +108,13 @@ const createBooking = async (req, res) => {
       bookingId: booking.id,
       ownerId: vehicle.ownerId,
       salesAgentId: null,
-      basePrice,
-      serviceChargeFlatFee: serviceChargeAmount,
+      basePrice: rentalAmount,
+      adminOpexFee,
+      totalAmount,
       currency: booking.currency,
       returnUrl: `${frontendUrl}/booking-success/${booking.id}`,
       cancelUrl: `${frontendUrl}/booking-cancel/${booking.id}`,
+      ownerPaypalEmail: owner.paypalEmail || process.env.PAYPAL_ADMIN_EMAIL,
     });
 
     if (!paypalOrder.success) {
@@ -127,7 +136,7 @@ const createBooking = async (req, res) => {
       amount: totalAmount,
       status: 'pending',
       description: `Payment for booking ${booking.bookingReference}`,
-      metadata: { paypalOrderId: paypalOrder.orderId, provider: 'paypal', ownerAddOnFee },
+      metadata: { paypalOrderId: paypalOrder.orderId, provider: 'paypal', adminOpexFee, ownerNetAmount },
     });
 
     res.status(201).json({

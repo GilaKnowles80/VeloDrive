@@ -85,17 +85,15 @@ router.post('/payment', verifyWebhookSignature, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Booking not found' });
           }
 
-          const basePrice = parseFloat(booking.basePrice);
-          const adminServiceCharge = parseFloat(booking.serviceChargeAmount || 250);
-          const ownerPayout = parseFloat(booking.ownerPayout || 0);
+          const adminOpexAmount = parseFloat(booking.adminOpexFee || 0);
+          const ownerNetAmount = parseFloat(booking.ownerNetAmount || 0);
 
           await processSplitPayment({
             bookingId,
             paypalTransactionId,
-            adminAmount: adminServiceCharge,
-            ownerAmount: ownerPayout,
-            salesAgentAmount: 0,
-            salesAgentId: null,
+            adminOpexAmount,
+            ownerNetAmount,
+            totalAmount: parseFloat(booking.totalAmount || 0),
             adminPaypalEmail: process.env.PAYPAL_ADMIN_EMAIL,
             ownerPaypalEmail: booking.owner?.paypalEmail
           });

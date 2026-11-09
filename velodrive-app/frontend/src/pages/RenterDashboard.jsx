@@ -27,8 +27,7 @@ const RenterDashboard = () => {
   const [paypalApprovalUrl, setPaypalApprovalUrl] = useState(null);
   const [feeBreakdown, setFeeBreakdown] = useState(null);
 
-  const OWNER_ADD_ON_FEE = 500;
-  const SERVICE_CHARGE_FLAT = 250;
+  const ADMIN_OPEX_PERCENT = 10; // 10% admin Opex fee
 
   const computeBreakdown = useCallback(() => {
     if (!bookingForm.vehicleId || !bookingForm.numberOfDays || parseInt(bookingForm.numberOfDays, 10) < 1) {
@@ -41,12 +40,10 @@ const RenterDashboard = () => {
       return;
     }
     const days = parseInt(bookingForm.numberOfDays, 10);
-    const rentalAmount = Number(vehicle.pricePerDay) * days;
-    const ownerAddOn = OWNER_ADD_ON_FEE;
-    const serviceCharge = SERVICE_CHARGE_FLAT;
-    const total = rentalAmount + ownerAddOn;
-    const ownerPayout = total - serviceCharge;
-    setFeeBreakdown({ rentalAmount, ownerAddOn, serviceCharge, total, ownerPayout, vehicle });
+    const ownerNetAmount = Number(vehicle.pricePerDay) * days;
+    const adminOpexFee = Number((ownerNetAmount * (ADMIN_OPEX_PERCENT / 100)).toFixed(2));
+    const total = Number((ownerNetAmount + adminOpexFee).toFixed(2));
+    setFeeBreakdown({ ownerNetAmount, adminOpexFee, total, vehicle, days });
   }, [bookingForm.vehicleId, bookingForm.numberOfDays, vehicles]);
 
   const handleBookVehicle = async (e) => {
@@ -212,24 +209,24 @@ const RenterDashboard = () => {
                 <h3 className="text-sm font-bold text-gray-900 mb-3">Fee Breakdown</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-gray-700">
-                    <span>Rental (Php {feeBreakdown.vehicle.pricePerDay}/day × {parseInt(bookingForm.numberOfDays, 10)} days)</span>
-                    <span>Php {feeBreakdown.rentalAmount.toFixed(2)}</span>
+                    <span>Vehicle Owner Net ({feeBreakdown.vehicle.pricePerDay}/day × {feeBreakdown.days} days)</span>
+                    <span>Php {feeBreakdown.ownerNetAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-700">
-                    <span>Owner Add-On Fee</span>
-                    <span>Php {feeBreakdown.ownerAddOn.toFixed(2)}</span>
+                    <span>Admin Opex Fee (10%)</span>
+                    <span>Php {feeBreakdown.adminOpexFee.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600 border-t border-gray-200 pt-2">
                     <span>Total You Pay</span>
                     <span className="font-bold">Php {feeBreakdown.total.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500 mt-2">
-                    <span>Admin Service Charge</span>
-                    <span>Php {feeBreakdown.serviceCharge.toFixed(2)}</span>
+                    <span>Paid to Vehicle Owner</span>
+                    <span>Php {feeBreakdown.ownerNetAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500">
-                    <span>Owner Payout (after service charge)</span>
-                    <span>Php {feeBreakdown.ownerPayout.toFixed(2)}</span>
+                    <span>Paid to Admin (gctravelandtours2021@gmail.com)</span>
+                    <span>Php {feeBreakdown.adminOpexFee.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

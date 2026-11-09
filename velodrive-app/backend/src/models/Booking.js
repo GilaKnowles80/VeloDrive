@@ -111,11 +111,16 @@ const Booking = sequelize.define('Booking', {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false
   },
-  // Owner add-on fee charged to owner's account at checkout (platform/listing fee)
-  ownerAddOnFee: {
+  // Net vehicle owner's setup payment (what owner receives before admin Opex)
+  ownerNetAmount: {
     type: DataTypes.DECIMAL(12, 2),
-    defaultValue: 0.00,
     allowNull: false
+  },
+  // Admin 10% Opex fee charged on top of owner net amount
+  adminOpexFee: {
+    type: DataTypes.DECIMAL(12, 2),
+    allowNull: false,
+    defaultValue: 0.00
   },
   status: {
     type: DataTypes.ENUM(

@@ -7,29 +7,29 @@ const {
 } = require('./escrowService');
 
 /**
- * Pricing rules for a booking (documented marketplace model):
- *   renter pays the rental amount + owner add-on fee
- *   admin keeps a flat service charge
- *   owner receives rental amount - service charge + owner add-on fee
+ * Pricing rules for a booking (marketplace split model):
+ *   renter pays: owner net amount + 10% admin Opex fee
+ *   admin keeps: 10% Opex fee
+ *   owner receives: net vehicle owner's setup payment
  */
 const SERVICE_CHARGE_FLAT = 250;
-const OWNER_ADD_ON_FEE = 500; // Php 500 per booking charged to owner's account
+const ADMIN_OPEX_PERCENT = 10; // 10% admin Opex fee
 
-const calculateBookingAmounts = (basePrice, serviceChargeFlatFee = SERVICE_CHARGE_FLAT, ownerAddOnFee = OWNER_ADD_ON_FEE) => {
+const calculateBookingAmounts = (basePrice, serviceChargeFlatFee = SERVICE_CHARGE_FLAT) => {
   const gross = Number(basePrice);
   if (!Number.isFinite(gross) || gross <= 0) throw new Error('Invalid booking amount');
 
-  const serviceChargeAmount = Number(Number(serviceChargeFlatFee).toFixed(2));
-  const ownerAddOn = Number(Number(ownerAddOnFee).toFixed(2));
-  const totalAmount = Number((gross + ownerAddOn).toFixed(2));
-  const ownerPayout = Number((totalAmount - serviceChargeAmount).toFixed(2));
+  const ownerNetAmount = Number(gross.toFixed(2));
+  const adminOpexFee = Number((gross * (ADMIN_OPEX_PERCENT / 100)).toFixed(2));
+  const totalAmount = Number((ownerNetAmount + adminOpexFee).toFixed(2));
+  const ownerPayout = ownerNetAmount;
 
-  return { basePrice: gross, serviceChargeAmount, ownerPayout, ownerAddOnFee: ownerAddOn, totalAmount };
+  return { basePrice: gross, ownerNetAmount, adminOpexFee, totalAmount, ownerPayout };
 };
 
 module.exports = {
   SERVICE_CHARGE_FLAT,
-  OWNER_ADD_ON_FEE,
+  ADMIN_OPEX_PERCENT,
   calculateBookingAmounts,
   getOrCreateWallet,
   applyDelta,

@@ -32,22 +32,23 @@ const paypalClient = new paypal.core.PayPalHttpClient(
 
 /**
  * Build a PayPal payment request object for booking escrow split
- * Renter pays total â†’ Admin takes Php 250 service charge â†’ Owner receives remaining balance
- * Owner's PayPal email is used for payout after escrow release
+ * Renter pays total → Admin takes 10% Opex fee → Owner receives net amount
+ * Owner's PayPal email is the payee; admin Opex goes to PAYPAL_ADMIN_EMAIL via platform_fees
  */
 const buildMultiPartyPaymentRequest = ({
   bookingId,
   ownerId,
   salesAgentId,
   basePrice,
-  serviceChargeFlatFee = 250,
+  adminOpexFee,
+  totalAmount,
   currency = 'PHP',
   returnUrl,
   cancelUrl,
   ownerPaypalEmail
 }) => {
-  const serviceChargeAmount = parseFloat(serviceChargeFlatFee.toFixed(2));
-  const ownerAmount = parseFloat((basePrice - serviceChargeAmount).toFixed(2));
+  const adminOpexAmount = parseFloat(adminOpexFee.toFixed(2));
+  const ownerNetAmount = parseFloat(basePrice.toFixed(2));
 
   const request = new paypal.orders.OrdersCreateRequest();
   request.requestBody({
@@ -57,11 +58,11 @@ const buildMultiPartyPaymentRequest = ({
         reference_id: `booking_${bookingId}`,
         amount: {
           currency_code: currency,
-          value: basePrice.toFixed(2),
+          value: totalAmount.toFixed(2),
           breakdown: {
             item_total: {
               currency_code: currency,
-              value: basePrice.toFixed(2)
+              value: totalAmount.toFixed(2)
             }
           }
         },
@@ -70,23 +71,23 @@ const buildMultiPartyPaymentRequest = ({
             name: `Vehicle Booking ${bookingId}`,
             unit_amount: {
               currency_code: currency,
-              value: basePrice.toFixed(2)
+              value: totalAmount.toFixed(2)
             },
             quantity: 1
           }
         ],
         payee: {
-          email_address: process.env.PAYPAL_ADMIN_EMAIL
+          email_address: ownerPaypalEmail || process.env.PAYPAL_ADMIN_EMAIL
         },
         payment_instruction: {
           platform_fees: [
             {
               amount: {
                 currency_code: currency,
-                value: serviceChargeAmount.toFixed(2)
+                value: adminOpexAmount.toFixed(2)
               },
-              type: 'SERVICE_CHARGE',
-              description: 'VeloDrive service charge (Php 250 flat)',
+              type: 'OPEX_FEE',
+              description: 'VeloDrive admin Opex fee (10%)',
               payee: {
                 email_address: process.env.PAYPAL_ADMIN_EMAIL
               }
@@ -110,8 +111,9 @@ const buildMultiPartyPaymentRequest = ({
       bookingId,
       ownerId,
       salesAgentId,
-      serviceChargeAmount,
-      ownerAmount,
+      adminOpexAmount,
+      ownerNetAmount,
+      totalAmount,
       adminPaypalEmail: process.env.PAYPAL_ADMIN_EMAIL,
       ownerPaypalEmail
     }
@@ -120,6 +122,7 @@ const buildMultiPartyPaymentRequest = ({
 
 /**
  * Create PayPal order for booking
+ * Payee = owner's PayPal email; platform_fees = admin 10% Opex to admin email
  */
 const createPayPalOrder = async (paymentDetails) => {
   try {
@@ -164,15 +167,15 @@ const capturePayPalPayment = async (orderId) => {
 
 /**
  * Process split payment after PayPal capture
- * Admin (service charge Php 250), Owner payout to their PayPal
+ * Admin (10% Opex fee) → admin wallet, completed immediately
+ * Owner (net amount) → owner wallet, escrow held until rental completion
  */
 const processSplitPayment = async ({
   bookingId,
   paypalTransactionId,
-  adminAmount,
-  ownerAmount,
-  salesAgentAmount,
-  salesAgentId,
+  adminOpexAmount,
+  ownerNetAmount,
+  totalAmount,
   adminPaypalEmail,
   ownerPaypalEmail
 }) => {
@@ -191,89 +194,50 @@ const processSplitPayment = async ({
     const adminUser = await User.findOne({ where: { role: 'admin' }, transaction });
     if (!adminUser) throw new Error('Admin account not found');
 
-    // 1. Record Admin service charge (platform fee)
-    if (Number(adminAmount) > 0) {
+    // 1. Record Admin Opex fee (10%) → admin wallet, completed immediately
+    if (Number(adminOpexAmount) > 0) {
       await Transaction.create({
-        reference: `PAY-${paypalTransactionId}-ADMIN`,
+        reference: `PAY-${paypalTransactionId}-ADMIN-OPEX`,
         type: 'service_charge',
         userId: adminUser.id,
         bookingId,
-        amount: adminAmount,
+        amount: adminOpexAmount,
         status: 'completed',
-        description: `VeloDrive service charge (Php 250) for booking ${booking.bookingReference}`,
+        description: `VeloDrive admin Opex fee (10%) for booking ${booking.bookingReference}`,
         metadata: {
           paypalTransactionId,
           recipient: process.env.PAYPAL_ADMIN_EMAIL,
           role: 'admin',
-          feeType: 'service_charge'
+          feeType: 'opex_fee'
         }
       }, { transaction });
     }
 
-    // 2. Record Sales Agent Commission (if applicable)
-    if (salesAgentId && salesAgentAmount > 0) {
+    // 2. Record Owner net amount → owner wallet, ESCROW HELD (released on rental completion)
+    if (Number(ownerNetAmount) > 0) {
       await Transaction.create({
-        reference: `PAY-${paypalTransactionId}-AGENT`,
-        type: 'commission',
-        userId: salesAgentId,
-        bookingId,
-        amount: salesAgentAmount,
-        status: 'completed',
-        description: `Sales Agent commission for booking ${booking.bookingReference}`,
-        metadata: {
-          paypalTransactionId,
-          recipient: salesAgentId,
-          role: 'sales_agent',
-          feeType: 'commission'
-        }
-      }, { transaction });
-    }
-
-    // 3. Record Owner Payout
-    if (Number(ownerAmount) > 0) {
-      await Transaction.create({
-        reference: `PAY-${paypalTransactionId}-OWNER`,
+        reference: `PAY-${paypalTransactionId}-OWNER-NET`,
         type: 'owner_payout',
         userId: booking.ownerId,
         bookingId,
-        amount: ownerAmount,
-        status: 'completed',
-        description: `Owner payout for booking ${booking.bookingReference}`,
+        amount: ownerNetAmount,
+        status: 'pending',
+        description: `Owner net payout (escrow held) for booking ${booking.bookingReference}`,
         metadata: {
           paypalTransactionId,
           recipient: ownerPaypalEmail || booking.owner?.paypalEmail,
           role: 'owner',
-          feeType: 'payout'
+          feeType: 'owner_net_payout',
+          escrowStatus: 'held'
         }
       }, { transaction });
     }
 
-    // 4. Record Owner Add-On Fee (charged to owner's account per booking)
-    const bookingData = await Booking.findByPk(bookingId, { transaction });
-    if (bookingData && Number(bookingData.ownerAddOnFee) > 0) {
-      await Transaction.create({
-        reference: `PAY-${paypalTransactionId}-OWNER-ADDON`,
-        type: 'owner_add_on_fee',
-        userId: booking.ownerId,
-        bookingId,
-        amount: bookingData.ownerAddOnFee,
-        status: 'completed',
-        description: `Owner add-on fee for booking ${booking.bookingReference}`,
-        metadata: {
-          paypalTransactionId,
-          recipient: booking.owner?.paypalEmail,
-          role: 'owner',
-          feeType: 'add_on_fee'
-        }
-      }, { transaction });
-    }
-
-    // 4. Update booking payment status
-    booking.paymentStatus = 'paid';
-    booking.escrowStatus = 'released';
+    // 3. Update booking: payment held in escrow, status confirmed (not completed yet)
+    booking.paymentStatus = 'held_in_escrow';
+    booking.escrowStatus = 'held';
     booking.paymentDate = new Date();
-    booking.status = 'completed';
-    booking.completedAt = new Date();
+    booking.status = 'confirmed';
     await booking.save({ transaction });
 
     await transaction.commit();

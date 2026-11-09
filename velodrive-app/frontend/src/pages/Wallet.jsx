@@ -14,7 +14,8 @@ const WalletPage = () => {
   const [wallet, setWallet] = useState({ balance: 0, bankAccountName: '', bankAccountNumber: '', bankName: '' });
   const [paymentAccount, setPaymentAccount] = useState({
     bankAccountName: '', bankAccountNumber: '', bankName: '', gcashNumber: '', paymentPreference: '', paypalEmail: '', paypalVerified: false,
-  });  const [transactions, setTransactions] = useState([]);
+  });
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [topupMethod, setTopupMethod] = useState('paypal');
@@ -148,6 +149,21 @@ const WalletPage = () => {
       alert(err.response?.data?.message || 'Failed to save account details');
     }
   };
+
+  // Wallet is only for Vehicle Owners and Admins
+  if (user && user.role === 'renter') {
+    return (
+      <div className="page-shell">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="card bg-amber-50 border border-amber-200 rounded-lg p-8 text-center">
+            <h2 className="text-lg font-bold text-amber-900 mb-2">Wallet Access</h2>
+            <p className="text-amber-700">The Wallet is available to Vehicle Owners and Admins only.</p>
+            <p className="text-amber-600 text-sm mt-2">Renters pay through checkout at the time of booking.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-shell">
