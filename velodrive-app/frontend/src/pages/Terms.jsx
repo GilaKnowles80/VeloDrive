@@ -10,8 +10,8 @@ const Terms = () => (
       </p>
       <h2 className="text-lg font-bold text-gray-900 mt-6 mb-2">Owner Obligations</h2>
       <ul className="list-disc list-inside text-gray-600 leading-relaxed mb-4">
-        <li>Monthly platform fee: Php 1,000</li>
-        <li>10% commission fee per booking</li>
+        <li>Subscription: Php 499/month or Php 4,999/year</li>
+        <li>10% service charge fee per booking</li>
         <li>Upload valid vehicle certificates and proof of ownership</li>
         <li>Maintain accurate vehicle descriptions and pricing</li>
       </ul>
@@ -23,7 +23,7 @@ const Terms = () => (
       </ul>
       <h2 className="text-lg font-bold text-gray-900 mt-6 mb-2">Payments & Escrow</h2>
       <p className="text-gray-600 leading-relaxed mb-4">
-        Payments are held in escrow and split between the owner (90%) and VeloDrive admin (10% commission) after rental completion. Refunds processed via e-wallet.
+        Payments are held in escrow: owner receives 90% net rental payment and VeloDrive holds the 10% service charge escrow split. Admin can only follow up refunds to Owner; Owner processes refunds because Owner holds the payment from Renter. Refunds are processed via e-wallet.
       </p>
       <div className="mt-8 pt-6 border-t border-gray-200 text-sm text-gray-500">
         <Link to="/" className="text-blue-600 hover:underline">← Back to Home</Link>
