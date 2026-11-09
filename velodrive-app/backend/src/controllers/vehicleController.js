@@ -27,7 +27,15 @@ const pick = (source, keys) =>
     return acc;
   }, {});
 
-const firstFile = (files, field) => files?.[field]?.[0]?.path || files?.[field]?.[0]?.location || null;
+// Convert a multer memory-storage file to a base64 data URL (works on Vercel read-only FS)
+const fileToDataUrl = (file) => {
+  if (!file) return null;
+  const mime = file.mimetype || 'application/octet-stream';
+  const base64 = file.buffer.toString('base64');
+  return `data:${mime};base64,${base64}`;
+};
+
+const firstFile = (files, field) => fileToDataUrl(files?.[field]?.[0]);
 
 const normalizeType = (raw) => {
   if (!raw) return null;
@@ -58,7 +66,7 @@ const createVehicle = async (req, res) => {
     }
 
     const adImages = (req.files?.adImages || []).slice(0, 10)
-      .map((file) => file.path || file.location)
+      .map((file) => fileToDataUrl(file))
       .filter(Boolean);
 
     let specifications = null;

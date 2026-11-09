@@ -26,7 +26,7 @@ const ensureDir = (dir) => {
   }
 };
 
-// Create upload directories at module load time (before any request)
+// Create upload directories at module load time (local dev only)
 // Uses absolute paths so they resolve regardless of working directory.
 const uploadsRoot = path.resolve(__dirname, '..', 'uploads');
 ensureDir(uploadsRoot);
@@ -46,19 +46,7 @@ const storage = useS3
         cb(null, filename);
       },
     })
-  : multer.diskStorage({
-      destination: (req, file, cb) => {
-        let folder = 'documents';
-        if (req.body.folder === 'ads') folder = 'ads';
-        if (req.body.folder === 'profile') folder = 'profile';
-        const uploadPath = path.resolve(uploadsRoot, folder);
-        ensureDir(uploadPath);
-        cb(null, uploadPath);
-      },
-      filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`);
-      },
-    });
+  : multer.memoryStorage();
 
 const isAdImageField = (field) => ['adCampaignImage', 'adImages'].includes(field);
 
