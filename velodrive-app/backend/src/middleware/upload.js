@@ -1,4 +1,5 @@
 const multer = require('multer');
+const fs = require('fs');
 const path = require('path');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const multerS3 = require('multer-s3');
@@ -17,6 +18,10 @@ if (useS3) {
   });
 }
 
+const ensureDir = (dir) => {
+  fs.mkdirSync(dir, { recursive: true });
+};
+
 const storage = useS3
   ? multerS3({
       s3: s3Client,
@@ -34,6 +39,7 @@ const storage = useS3
         let uploadPath = 'src/uploads/documents';
         if (req.body.folder === 'ads') uploadPath = 'src/uploads/ads';
         if (req.body.folder === 'profile') uploadPath = 'src/uploads/profile';
+        ensureDir(uploadPath);
         cb(null, uploadPath);
       },
       filename: (req, file, cb) => {
