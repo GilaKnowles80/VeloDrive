@@ -98,7 +98,7 @@ const OwnerDashboard = () => {
     const imageCount = ads.filter((a) => a.file).length;
     if (imageCount < 1) { setErr('Upload at least 1 vehicle ad image (PNG/JPEG).'); return; }
     if (!docs.or || !docs.proofOfOwnership || !docs.cr) {
-      setErr('Certificate of Registration, Proof of Ownership, and Original Certificate are required.');
+      setErr('OR, Proof of Ownership, and CR are required.');
       return;
     }
     const fd = new FormData();
@@ -350,7 +350,7 @@ const OwnerDashboard = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-700 block">Certificate of Registration</label>
+                <label className="text-xs font-medium text-gray-700 block">OR (Certificate of Registration)</label>
                 <label className="block border border-gray-300 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors">
                   <svg className="w-5 h-5 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   <span className="text-xs text-gray-600">Upload PNG/JPEG/PDF</span>
