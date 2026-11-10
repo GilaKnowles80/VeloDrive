@@ -355,7 +355,7 @@ const OwnerDashboard = () => {
               <div className="space-y-1">
                 <label
                   onClick={() => docOrRef.current?.click()}
-                  className="block border border-gray-300 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors"
+                  className={`block border rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors ${docs.or ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <p className="text-xs font-semibold text-gray-800">OR</p>
@@ -364,12 +364,13 @@ const OwnerDashboard = () => {
                   <svg className="w-5 h-5 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   <span className="text-xs text-gray-600">Upload PNG/JPEG/PDF</span>
                   <input ref={docOrRef} type="file" className="hidden" accept="image/png,image/jpeg,.pdf" onChange={(e)=>setDocs({...docs, or:e.target.files[0]})} />
+                  {docs.or && <div className="mt-1 text-xs text-green-700 flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> {docs.or.name}</div>}
                 </label>
               </div>
               <div className="space-y-1">
                 <label
                   onClick={() => docProofRef.current?.click()}
-                  className="block border border-gray-300 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors"
+                  className={`block border rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors ${docs.proofOfOwnership ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <p className="text-xs font-semibold text-gray-800">Proof of Ownership</p>
@@ -377,12 +378,13 @@ const OwnerDashboard = () => {
                   <svg className="w-5 h-5 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   <span className="text-xs text-gray-600">Upload document</span>
                   <input ref={docProofRef} type="file" className="hidden" accept="image/png,image/jpeg,.pdf" onChange={(e)=>setDocs({...docs, proofOfOwnership:e.target.files[0]})} />
+                  {docs.proofOfOwnership && <div className="mt-1 text-xs text-green-700 flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> {docs.proofOfOwnership.name}</div>}
                 </label>
               </div>
               <div className="space-y-1">
                 <label
                   onClick={() => docCrRef.current?.click()}
-                  className="block border border-gray-300 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors"
+                  className={`block border rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors ${docs.cr ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <p className="text-xs font-semibold text-gray-800">CR</p>
@@ -391,6 +393,7 @@ const OwnerDashboard = () => {
                   <svg className="w-5 h-5 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   <span className="text-xs text-gray-600">Upload document</span>
                   <input ref={docCrRef} type="file" className="hidden" accept="image/png,image/jpeg,.pdf" onChange={(e)=>setDocs({...docs, cr:e.target.files[0]})} />
+                  {docs.cr && <div className="mt-1 text-xs text-green-700 flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> {docs.cr.name}</div>}
                 </label>
               </div>
             </div>
