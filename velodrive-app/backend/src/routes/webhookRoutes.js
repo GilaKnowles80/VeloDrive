@@ -3,7 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const { protect, authorize } = require('../middleware/auth');
 const { processSplitPayment, processOwnerSubscription, refundPayment } = require('../services/paypalService');
-const { Booking, Transaction, User } = require('../models');
+const { Booking, Transaction, User, Vehicle } = require('../models');
 
 // Resend sends Svix-signed webhooks. Capture raw body for signature verification.
 router.use('/resend', express.raw({ type: '*/*', limit: '1mb' }));
@@ -84,6 +84,17 @@ router.post('/payment', verifyWebhookSignature, async (req, res) => {
           if (!booking) {
             return res.status(404).json({ success: false, message: 'Booking not found' });
           }
+
+          // Update booking status to active (renter picked up vehicle)
+          booking.status = 'active';
+          booking.paymentStatus = 'paid';
+          await booking.save();
+
+          // Set vehicle to en-route and mark unavailable for new bookings
+          await Vehicle.update(
+            { status: 'en-route', isAvailable: false },
+            { where: { id: booking.vehicleId } }
+          );
 
           const serviceChargeAmount = parseFloat(booking.serviceChargeFee || 0);
           const ownerNetAmount = parseFloat(booking.ownerNetAmount || 0);

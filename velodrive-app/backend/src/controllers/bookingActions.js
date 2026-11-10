@@ -1,4 +1,4 @@
-const { Booking } = require('../models');
+const { Booking, Vehicle } = require('../models');
 const {
   releaseEscrowToOwner,
   refundBooking,
@@ -47,6 +47,12 @@ const startRental = async (req, res) => {
     booking.status = 'active';
     await booking.save();
 
+    // Set vehicle to en-route and mark unavailable while rental is active
+    await Vehicle.update(
+      { status: 'en-route', isAvailable: false },
+      { where: { id: booking.vehicleId } }
+    );
+
     res.json({ success: true, message: 'Rental started', booking });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -80,6 +86,19 @@ const completeRental = async (req, res) => {
     booking.actualReturnDate = new Date();
     booking.status = 'completed';
     await booking.save();
+
+    // Return vehicle to active if no damage, else maintenance
+    if (booking.damageCharged && booking.damageCharged > 0) {
+      await Vehicle.update(
+        { status: 'maintenance', isAvailable: false },
+        { where: { id: booking.vehicleId } }
+      );
+    } else {
+      await Vehicle.update(
+        { status: 'active', isAvailable: true },
+        { where: { id: booking.vehicleId } }
+      );
+    }
 
     const extraTotal = Number(
       (
@@ -118,6 +137,12 @@ const cancelBooking = async (req, res) => {
 
     const reason = req.user.role === 'admin' ? 'Cancelled by admin' : 'Cancelled by renter';
     const result = await refundBooking(booking.id, reason);
+
+    // Return vehicle to active and available on cancellation
+    await Vehicle.update(
+      { status: 'active', isAvailable: true },
+      { where: { id: booking.vehicleId } }
+    );
 
     res.json({
       success: true,

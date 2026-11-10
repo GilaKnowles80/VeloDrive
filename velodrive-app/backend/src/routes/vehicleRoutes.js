@@ -10,6 +10,7 @@ const {
   updateGPSLocation,
   getVehicleGPS,
   getGPSHistory,
+  updateVehicleStatus,
 } = require('../controllers/vehicleController');
 const { upload } = require('../middleware/upload');
 
@@ -48,6 +49,9 @@ router.get('/my-vehicles', protect, authorize('owner'), getOwnerVehicles);
 // Authenticated: single vehicle (owner/admin may see unverified)
 router.get('/:id', protect, getVehicleById);
 router.put('/:id', protect, updateVehicle);
+
+// Owner/admin: manually set vehicle status (active / en-route / maintenance / suspended)
+router.put('/:id/status', protect, updateVehicleStatus);
 
 // Owner/admin: GPS write + read
 router.post('/:vehicleId/gps', protect, authorize('owner', 'admin'), updateGPSLocation);

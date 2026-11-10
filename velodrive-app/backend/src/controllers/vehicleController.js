@@ -313,4 +313,32 @@ module.exports = {
   updateGPSLocation,
   getVehicleGPS,
   getGPSHistory,
+  updateVehicleStatus,
+};
+
+const updateVehicleStatus = async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findByPk(req.params.id);
+    if (!vehicle) return res.status(404).json({ success: false, message: 'Vehicle not found' });
+
+    const isOwner = vehicle.ownerId === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    const { status } = req.body;
+    if (!status || !['active', 'en-route', 'inactive', 'maintenance', 'suspended'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status. Use: active, en-route, inactive, maintenance, suspended' });
+    }
+
+    const isAvailable = status === 'active';
+    vehicle.status = status;
+    vehicle.isAvailable = isAvailable;
+    await vehicle.save();
+
+    res.json({ success: true, vehicle, message: `Vehicle status updated to ${status}` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };

@@ -61,6 +61,18 @@ const OwnerDashboard = () => {
     finally { setLoading(false); }
   };
 
+  const updateVehicleStatus = async (vehicleId, newStatus) => {
+    try {
+      const resp = await api.put(`/vehicles/${vehicleId}/status`, { status: newStatus });
+      if (resp.data?.success) {
+        setMsg(`Vehicle status updated to ${newStatus}`);
+        loadData();
+      }
+    } catch (e2) {
+      setErr(e2.response?.data?.message || 'Failed to update vehicle status');
+    }
+  };
+
   useEffect(() => { loadData(); }, []);
 
   // Sync company details from user
@@ -454,7 +466,10 @@ const OwnerDashboard = () => {
                     <div>
                       <div className="flex items-center justify-between gap-2">
                         <h3 className="font-bold text-gray-900">{v.adCampaignTitle || `${v.make} ${v.model} ${v.year}`}</h3>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${v.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{v.isVerified ? 'Verified' : 'Pending'}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${v.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{v.isVerified ? 'Verified' : 'Pending'}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${v.status === 'en-route' ? 'bg-blue-100 text-blue-700' : v.status === 'maintenance' ? 'bg-red-100 text-red-700' : v.status === 'inactive' ? 'bg-gray-100 text-gray-700' : v.status === 'suspended' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>{v.status === 'en-route' ? 'En Route' : v.status === 'maintenance' ? 'Maintenance' : v.status === 'inactive' ? 'Inactive' : v.status === 'suspended' ? 'Suspended' : 'Active'}</span>
+                        </div>
                       </div>
                       <p className="text-sm text-blue-700 font-semibold mt-1">Php {v.pricePerDay}/day</p>
                       <p className="text-xs text-gray-500">{v.type} • {v.color} • {v.licensePlate}</p>
@@ -465,6 +480,20 @@ const OwnerDashboard = () => {
                           dangerouslySetInnerHTML={{ __html: (v.adCampaignDescription || v.description || '') }}
                         />
                         {!v.adCampaignDescription && !v.description && <p className="text-xs text-gray-400 mt-1">No description provided.</p>}
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Vehicle Status</p>
+                        <select
+                          value={v.status || 'active'}
+                          onChange={(e) => updateVehicleStatus(v.id, e.target.value)}
+                          className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
+                        >
+                          <option value="active">Active</option>
+                          <option value="en-route">En Route</option>
+                          <option value="maintenance">Maintenance (Damage/Broken)</option>
+                          <option value="inactive">Inactive</option>
+                          <option value="suspended">Suspended</option>
+                        </select>
                       </div>
                     </div>
                   </div>
