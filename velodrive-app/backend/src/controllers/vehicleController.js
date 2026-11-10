@@ -56,7 +56,7 @@ const createVehicle = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Unsupported vehicle type' });
     }
 
-    const requiredDocs = ['certificateOfRegistration', 'proofOfOwnership', 'originalCertificate'];
+    const requiredDocs = ['or', 'proofOfOwnership', 'cr'];
     const missingDocs = requiredDocs.filter((field) => !firstFile(req.files, field));
     if (missingDocs.length) {
       return res.status(400).json({
@@ -107,9 +107,9 @@ const createVehicle = async (req, res) => {
       adCampaignTitle: req.body.adCampaignTitle || null,
       adCampaignDescription: req.body.adCampaignDescription || adDescriptions[0] || null,
       gpsDeviceId: req.body.gpsDeviceId || null,
-      certificateOfRegistration: firstFile(req.files, 'certificateOfRegistration'),
+      or: firstFile(req.files, 'or'),
       proofOfOwnership: firstFile(req.files, 'proofOfOwnership'),
-      originalCertificate: firstFile(req.files, 'originalCertificate'),
+      cr: firstFile(req.files, 'cr'),
       adCampaignImage: adImages[0] || firstFile(req.files, 'adCampaignImage'),
       adImages: adImages.length ? adImages : null,
       adCampaignVideo: firstFile(req.files, 'adCampaignVideo'),

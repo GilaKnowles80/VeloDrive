@@ -56,10 +56,6 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(100),
     allowNull: true
   },
-  nbiClearance: {
-    type: DataTypes.STRING(255), // path to uploaded file
-    allowNull: true
-  },
   taxCertificate: {
     type: DataTypes.STRING(255),
     allowNull: true

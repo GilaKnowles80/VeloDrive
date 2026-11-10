@@ -14,9 +14,9 @@ const {
 const { upload } = require('../middleware/upload');
 
 const vehicleUpload = upload.fields([
-  { name: 'certificateOfRegistration', maxCount: 1 },
+  { name: 'or', maxCount: 1 },
   { name: 'proofOfOwnership', maxCount: 1 },
-  { name: 'originalCertificate', maxCount: 1 },
+  { name: 'cr', maxCount: 1 },
   { name: 'adCampaignImage', maxCount: 1 },
   { name: 'adImages', maxCount: 10 },
   { name: 'adCampaignVideo', maxCount: 1 },

@@ -70,17 +70,19 @@ const Vehicle = sequelize.define('Vehicle', {
     defaultValue: 'PHP'
   },
   // Original certificates uploaded by owner
-  certificateOfRegistration: {
+  or: {
     type: DataTypes.TEXT,
-    allowNull: false
+    allowNull: false,
+    field: 'OR'
   },
   proofOfOwnership: {
     type: DataTypes.TEXT,
     allowNull: false
   },
-  originalCertificate: {
+  cr: {
     type: DataTypes.TEXT,
-    allowNull: false
+    allowNull: false,
+    field: 'CR'
   },
   // Marketing ad campaign
   adCampaignTitle: {

@@ -30,7 +30,7 @@ const OwnerDashboard = () => {
     type: 'car', make: '', model: '', year: new Date().getFullYear(), color: '',
     licensePlate: '', vin: '', description: '', pricePerDay: '', adCampaignTitle: '',
   });
-  const [docs, setDocs] = useState({ certificateOfRegistration: null, proofOfOwnership: null, originalCertificate: null });
+  const [docs, setDocs] = useState({ or: null, proofOfOwnership: null, cr: null });
 
   // Company details state
   const [companyEdit, setCompanyEdit] = useState(false);
@@ -97,7 +97,7 @@ const OwnerDashboard = () => {
     setErr(''); setMsg('');
     const imageCount = ads.filter((a) => a.file).length;
     if (imageCount < 1) { setErr('Upload at least 1 vehicle ad image (PNG/JPEG).'); return; }
-    if (!docs.certificateOfRegistration || !docs.proofOfOwnership || !docs.originalCertificate) {
+    if (!docs.or || !docs.proofOfOwnership || !docs.cr) {
       setErr('Certificate of Registration, Proof of Ownership, and Original Certificate are required.');
       return;
     }
@@ -113,7 +113,7 @@ const OwnerDashboard = () => {
       setMsg('Vehicle ad submitted. It will appear after verification.');
       setForm({ type: 'car', make: '', model: '', year: new Date().getFullYear(), color: '', licensePlate: '', vin: '', description: '', pricePerDay: '', adCampaignTitle: '' });
       setAds([emptyAd()]);
-      setDocs({ certificateOfRegistration: null, proofOfOwnership: null, originalCertificate: null });
+      setDocs({ or: null, proofOfOwnership: null, cr: null });
       loadData();
     } catch (e2) {
       setErr(e2.response?.data?.message || 'Failed to submit vehicle ad.');
@@ -354,7 +354,7 @@ const OwnerDashboard = () => {
                 <label className="block border border-gray-300 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors">
                   <svg className="w-5 h-5 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   <span className="text-xs text-gray-600">Upload PNG/JPEG/PDF</span>
-                  <input type="file" className="hidden" accept="image/png,image/jpeg,.pdf" onChange={(e)=>setDocs({...docs, certificateOfRegistration:e.target.files[0]})} required />
+                  <input type="file" className="hidden" accept="image/png,image/jpeg,.pdf" onChange={(e)=>setDocs({...docs, or:e.target.files[0]})} required />
                 </label>
               </div>
               <div className="space-y-1">
@@ -370,7 +370,7 @@ const OwnerDashboard = () => {
                 <label className="block border border-gray-300 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors">
                   <svg className="w-5 h-5 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   <span className="text-xs text-gray-600">Upload document</span>
-                  <input type="file" className="hidden" accept="image/png,image/jpeg,.pdf" onChange={(e)=>setDocs({...docs, originalCertificate:e.target.files[0]})} required />
+                  <input type="file" className="hidden" accept="image/png,image/jpeg,.pdf" onChange={(e)=>setDocs({...docs, cr:e.target.files[0]})} required />
                 </label>
               </div>
             </div>

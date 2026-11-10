@@ -54,7 +54,6 @@ const eraseUserData = async (userId) => {
         email: anonymisedEmail,
         phone: REDACTED,
         address: REDACTED,
-        nbiClearance: null,
         taxCertificate: null,
         validId: null,
         driversLicense: null,

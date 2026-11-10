@@ -34,9 +34,9 @@
       "https://via.placeholder.com/400x300/cccccc/000000?text=Sample+Ad+Vehicle"
     ],
     "certificates": {
-      "certificateOfRegistration": "https://via.placeholder.com/150/cccccc/000000?text=CR+Sample",
+      "or": "https://via.placeholder.com/150/cccccc/000000?text=OR+Sample",
       "proofOfOwnership": "https://via.placeholder.com/150/cccccc/000000?text=PO+Sample",
-      "originalCertificate": "https://via.placeholder.com/150/cccccc/000000?text=OC+Sample"
+      "cr": "https://via.placeholder.com/150/cccccc/000000?text=CR+Sample"
     },
     "status": "active",
     "isAvailable": true,
