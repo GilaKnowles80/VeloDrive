@@ -3,6 +3,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "target": "ES2022",
+    "jsx": "react-jsx",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -10,5 +11,6 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["vite.config.js", "postcss.config.js", "tailwind.config.js"]
+  "include": ["src"],
+  "exclude": ["vite.config.js", "postcss.config.js", "tailwind.config.js"]
 }
