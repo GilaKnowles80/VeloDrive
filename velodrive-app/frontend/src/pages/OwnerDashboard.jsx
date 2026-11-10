@@ -335,6 +335,17 @@ const OwnerDashboard = () => {
                 <label className="text-xs font-medium text-gray-700">VIN (optional)</label>
                 <input className="input-field" placeholder="VIN" value={form.vin} onChange={(e)=>setForm({...form, vin:e.target.value})} />
               </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700 block">Company Details</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                  <input className="input-field" placeholder="Company Name" value={companyForm.companyName} onChange={(e)=>setCompanyForm({...companyForm, companyName:e.target.value})} />
+                  <input className="input-field" placeholder="Contact Person" value={companyForm.contactPerson} onChange={(e)=>setCompanyForm({...companyForm, contactPerson:e.target.value})} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <input className="input-field" placeholder="Company Address" value={companyForm.companyAddress} onChange={(e)=>setCompanyForm({...companyForm, companyAddress:e.target.value})} />
+                  <input className="input-field" placeholder="Contact Number" value={companyForm.contactNumber} onChange={(e)=>setCompanyForm({...companyForm, contactNumber:e.target.value})} />
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
