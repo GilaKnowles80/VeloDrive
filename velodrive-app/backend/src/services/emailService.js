@@ -69,7 +69,17 @@ const sendOTPEmail = async (email, otpCode) => {
   try {
     const result = await emailCircuit.exec(() => retry(async () => {
       let r = null;
-      if (process.env.RESEND_API_KEY) r = await sendViaResend(email, otpCode);
+      // 1) Try Resend first
+      if (process.env.RESEND_API_KEY) {
+        try {
+          r = await sendViaResend(email, otpCode);
+        } catch (e) {
+          // Resend failed (e.g., onboarding@resend.dev can't send to unverified emails)
+          // Fall through to SMTP below
+          console.warn(JSON.stringify({ level: 'warn', msg: 'resend_failed_fallback_to_smtp', error: e.message }));
+        }
+      }
+      // 2) Try SMTP fallback if Resend didn't succeed
       if (!r) r = await sendViaSmtp(email, otpCode);
       if (!r) {
         const e = new Error('No email provider configured. Set RESEND_API_KEY (recommended) or EMAIL_USER/EMAIL_PASS.');
@@ -113,17 +123,21 @@ const sendResetPasswordEmail = async (email, resetUrl) => {
     const result = await emailCircuit.exec(() => retry(async () => {
       let r = null;
       if (process.env.RESEND_API_KEY) {
-        const apiKey = process.env.RESEND_API_KEY;
-        const from = process.env.FROM_EMAIL || process.env.EMAIL_FROM || 'VeloDrive <onboarding@resend.dev>';
-        const { subject, text, html } = buildResetPasswordEmail(resetUrl);
-        const resp = await withTimeout(fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from, to: [email], subject, text, html }),
-        }), EMAIL_TIMEOUT_MS, 'resend');
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) throw new Error(data?.message || data?.error?.message || `Resend API error ${resp.status}`);
-        r = { provider: 'resend', messageId: data.id };
+        try {
+          const apiKey = process.env.RESEND_API_KEY;
+          const from = process.env.FROM_EMAIL || process.env.EMAIL_FROM || 'VeloDrive <onboarding@resend.dev>';
+          const { subject, text, html } = buildResetPasswordEmail(resetUrl);
+          const resp = await withTimeout(fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from, to: [email], subject, text, html }),
+          }), EMAIL_TIMEOUT_MS, 'resend');
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(data?.message || data?.error?.message || `Resend API error ${resp.status}`);
+          r = { provider: 'resend', messageId: data.id };
+        } catch (e) {
+          console.warn(JSON.stringify({ level: 'warn', msg: 'resend_failed_fallback_to_smtp', error: e.message }));
+        }
       }
       if (!r) {
         const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, FROM_EMAIL } = process.env;
