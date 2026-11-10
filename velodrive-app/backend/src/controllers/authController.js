@@ -8,6 +8,7 @@ const { sendOTPEmail, sendResetPasswordEmail } = require('../services/emailServi
 const OTP_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const OTP_MAX_SENDS = 3;
 const OTP_EXPIRES_MS = 10 * 60 * 1000;
+const OTP_BYPASS = process.env.OTP_BYPASS === 'true';
 
 const generateOtpCode = () => String(crypto.randomInt(100000, 1000000));
 
@@ -89,8 +90,25 @@ const register = async (req, res) => {
         otpExpires: null,
         otpLastSentAt: null,
         otpSendCount: 0,
-        isEmailVerified: false,
+        isEmailVerified: OTP_BYPASS || false,
       }, { transaction: t });
+
+      if (OTP_BYPASS) {
+        // Create wallet, log GDPR consent, return without OTP
+        await Wallet.create({ userId: user.id, balance: 0.00 }, { transaction: t });
+        if (gdprConsent) {
+          await GDPRConsent.create({
+            userId: user.id,
+            consentType: 'data_processing',
+            isGranted: true,
+            grantedAt: new Date(),
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent'),
+            version: '1.0'
+          }, { transaction: t });
+        }
+        return { user, otpCode: null, bypassed: true };
+      }
 
       // Enforce max 3 OTPs per 10 minutes (registration counts as first send)
       const now = new Date();
@@ -123,7 +141,19 @@ const register = async (req, res) => {
       return { user, otpCode };
     });
 
-    const { user, otpCode } = result;
+    const { user, otpCode, bypassed } = result;
+
+    if (bypassed) {
+      const userResponse = user.toJSON();
+      delete userResponse.password;
+      delete userResponse.otpCode;
+      return res.status(201).json({
+        success: true,
+        emailSent: true,
+        message: 'Registration successful. Account is verified (OTP bypass mode).',
+        user: userResponse,
+      });
+    }
 
     // Send OTP email after commit (external side effect) and report delivery status honestly
     const emailResult = await sendOTPEmail(email, otpCode);
@@ -229,7 +259,7 @@ const login = async (req, res) => {
       return res.status(403).json({ success: false, message: 'This account has been suspended. Contact VeloDrive support.' });
     }
 
-    if (!user.isEmailVerified) {
+    if (!user.isEmailVerified && !OTP_BYPASS) {
       return res.status(403).json({ success: false, message: 'Please verify your email address using the OTP code before logging in.' });
     }
 

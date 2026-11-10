@@ -38,7 +38,7 @@ const OwnerDashboard = () => {
   // Company details state
   const [companyEdit, setCompanyEdit] = useState(false);
   const [companyForm, setCompanyForm] = useState({
-    companyName: '', companyAddress: '', contactNumber: '', contactPerson: '',
+    companyName: '', companyAddress: '', contactNumber: '', contactPerson: '', email: '', position: '',
   });
   const [companySaving, setCompanySaving] = useState(false);
 
@@ -83,6 +83,8 @@ const OwnerDashboard = () => {
         companyAddress: user.companyAddress || '',
         contactNumber: user.contactNumber || '',
         contactPerson: user.contactPerson || '',
+        email: user.email || '',
+        position: user.position || '',
       });
     }
   }, [user]);
@@ -124,7 +126,7 @@ const OwnerDashboard = () => {
     Object.entries(docs).forEach(([k, f]) => { if (f) fd.append(k, f); });
     setSaving(true);
     try {
-      await api.post('/vehicles/', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      await api.post('/vehicles/', fd);
       setMsg('Vehicle ad submitted. It will appear after verification.');
       setForm({ type: 'car', make: '', model: '', year: new Date().getFullYear(), color: '', licensePlate: '', vin: '', description: '', pricePerDay: '', adCampaignTitle: '' });
       setAds([emptyAd()]);
@@ -144,6 +146,7 @@ const OwnerDashboard = () => {
         companyAddress: companyForm.companyAddress,
         contactNumber: companyForm.contactNumber,
         contactPerson: companyForm.contactPerson,
+        position: companyForm.position,
       });
       if (resp.data?.user) {
         updateUser(resp.data.user);
@@ -217,44 +220,68 @@ const OwnerDashboard = () => {
 
           {companyEdit ? (
             <form onSubmit={saveCompanyDetails} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Company Name</label>
-                  <input
-                    className="input-field"
-                    value={companyForm.companyName}
-                    onChange={(e) => setCompanyForm({ ...companyForm, companyName: e.target.value })}
-                    placeholder="e.g., Sample Vehicle Rentals"
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2 space-y-2">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Company Name</label>
+                    <input
+                      className="input-field"
+                      value={companyForm.companyName}
+                      onChange={(e) => setCompanyForm({ ...companyForm, companyName: e.target.value })}
+                      placeholder="e.g., Sample Vehicle Rentals"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Company Address</label>
+                    <input
+                      className="input-field"
+                      value={companyForm.companyAddress}
+                      onChange={(e) => setCompanyForm({ ...companyForm, companyAddress: e.target.value })}
+                      placeholder="e.g., 123 Main Street, Metro Manila, Philippines"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Contact Person</label>
-                  <input
-                    className="input-field"
-                    value={companyForm.contactPerson}
-                    onChange={(e) => setCompanyForm({ ...companyForm, contactPerson: e.target.value })}
-                    placeholder="e.g., Virgilio Cain"
-                  />
+                <div className="md:col-span-1 space-y-2">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Contact Person</label>
+                    <input
+                      className="input-field"
+                      value={companyForm.contactPerson}
+                      onChange={(e) => setCompanyForm({ ...companyForm, contactPerson: e.target.value })}
+                      placeholder="e.g., Virgilio Cain"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Contact Number</label>
+                    <input
+                      className="input-field"
+                      type="tel"
+                      value={companyForm.contactNumber}
+                      onChange={(e) => setCompanyForm({ ...companyForm, contactNumber: e.target.value })}
+                      placeholder="+63 9xx xxx xxxx"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">Company Address</label>
-                <input
-                  className="input-field"
-                  value={companyForm.companyAddress}
-                  onChange={(e) => setCompanyForm({ ...companyForm, companyAddress: e.target.value })}
-                  placeholder="e.g., 123 Main Street, Metro Manila, Philippines"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">Contact Number</label>
-                <input
-                  className="input-field"
-                  type="tel"
-                  value={companyForm.contactNumber}
-                  onChange={(e) => setCompanyForm({ ...companyForm, contactNumber: e.target.value })}
-                  placeholder="+63 9xx xxx xxxx"
-                />
+                <div className="md:col-span-1 space-y-2">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Position</label>
+                    <input
+                      className="input-field"
+                      value={companyForm.position}
+                      onChange={(e) => setCompanyForm({ ...companyForm, position: e.target.value })}
+                      placeholder="e.g., Owner / Manager"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Email Address</label>
+                    <input
+                      className="input-field"
+                      type="email"
+                      value={companyForm.email}
+                      readOnly
+                    />
+                  </div>
+                </div>
               </div>
               <div className="flex gap-3 pt-2">
                 <button
@@ -273,6 +300,8 @@ const OwnerDashboard = () => {
                         companyAddress: user.companyAddress || '',
                         contactNumber: user.contactNumber || '',
                         contactPerson: user.contactPerson || '',
+                        email: user.email || '',
+                        position: user.position || '',
                       });
                     }
                     setCompanyEdit(false);
@@ -284,22 +313,38 @@ const OwnerDashboard = () => {
               </div>
             </form>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Name</p>
-                <p className="text-gray-900 font-medium">{companyForm.companyName || '— Not set —'}</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Contact Person</p>
-                <p className="text-gray-900 font-medium">{companyForm.contactPerson || '— Not set —'}</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Address</p>
-                <p className="text-gray-900 font-medium">{companyForm.companyAddress || '— Not set —'}</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Contact Number</p>
-                <p className="text-gray-900 font-medium">{companyForm.contactNumber || '— Not set —'}</p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                <div className="md:col-span-2 space-y-2">
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Name</p>
+                    <p className="text-gray-900 font-medium">{companyForm.companyName || '— Not set —'}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Address</p>
+                    <p className="text-gray-900 font-medium">{companyForm.companyAddress || '— Not set —'}</p>
+                  </div>
+                </div>
+                <div className="md:col-span-1 space-y-2">
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Contact Person</p>
+                    <p className="text-gray-900 font-medium">{companyForm.contactPerson || '— Not set —'}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Contact Number</p>
+                    <p className="text-gray-900 font-medium">{companyForm.contactNumber || '— Not set —'}</p>
+                  </div>
+                </div>
+                <div className="md:col-span-1 space-y-2">
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Position</p>
+                    <p className="text-gray-900 font-medium">{companyForm.position || '— Not set —'}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Email Address</p>
+                    <p className="text-gray-900 font-medium">{companyForm.email || '— Not set —'}</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -352,13 +397,21 @@ const OwnerDashboard = () => {
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-700 block">Company Details</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                  <input className="input-field" placeholder="Company Name" value={companyForm.companyName} onChange={(e)=>setCompanyForm({...companyForm, companyName:e.target.value})} />
-                  <input className="input-field" placeholder="Contact Person" value={companyForm.contactPerson} onChange={(e)=>setCompanyForm({...companyForm, contactPerson:e.target.value})} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <input className="input-field" placeholder="Company Address" value={companyForm.companyAddress} onChange={(e)=>setCompanyForm({...companyForm, companyAddress:e.target.value})} />
-                  <input className="input-field" placeholder="Contact Number" value={companyForm.contactNumber} onChange={(e)=>setCompanyForm({...companyForm, contactNumber:e.target.value})} />
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <div className="md:col-span-2 space-y-1">
+                      <input className="input-field" placeholder="Company Name" value={companyForm.companyName} onChange={(e)=>setCompanyForm({...companyForm, companyName:e.target.value})} />
+                      <input className="input-field" placeholder="Company Address" value={companyForm.companyAddress} onChange={(e)=>setCompanyForm({...companyForm, companyAddress:e.target.value})} />
+                    </div>
+                    <div className="md:col-span-1 space-y-1">
+                      <input className="input-field" placeholder="Contact Person" value={companyForm.contactPerson} onChange={(e)=>setCompanyForm({...companyForm, contactPerson:e.target.value})} />
+                      <input className="input-field" placeholder="Contact Phone Number" value={companyForm.contactNumber} onChange={(e)=>setCompanyForm({...companyForm, contactNumber:e.target.value})} />
+                    </div>
+                    <div className="md:col-span-1 space-y-1">
+                      <input className="input-field" placeholder="Position" value={companyForm.position} onChange={(e)=>setCompanyForm({...companyForm, position:e.target.value})} />
+                      <input className="input-field" type="email" placeholder="Email Address" value={companyForm.email} readOnly />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

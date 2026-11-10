@@ -19,7 +19,7 @@ const DOCUMENT_TYPES = [
 const PROFILE_FIELDS = [
   'firstName', 'lastName', 'phone', 'address',
   'bankAccountName', 'bankAccountNumber', 'bankName', 'paypalEmail',
-  'companyName', 'companyAddress', 'contactNumber', 'contactPerson',
+  'companyName', 'companyAddress', 'contactNumber', 'contactPerson', 'position',
 ];
 
 const updateProfile = async (req, res) => {

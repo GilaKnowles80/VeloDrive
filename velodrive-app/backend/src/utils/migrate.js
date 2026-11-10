@@ -82,8 +82,21 @@ const runMigrations = async () => {
       ADD COLUMN IF NOT EXISTS owner_payout DECIMAL(12, 2) DEFAULT 0.00;
     `);
     console.log('✅ Added service_charge_amount and owner_payout to bookings table');
+    // Add position column to users table (owner job title)
+    await sequelize.query(
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS position VARCHAR(100);
+    );
+    console.log('✅ Added position column to users table');
 
-    console.log('✅ All migrations completed successfully');
+        // Add position column to users table (owner job title)
+    await sequelize.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS position VARCHAR(100);
+    `);
+    console.log('Added position column to users table');
+
+console.log('✅ All migrations completed successfully');
     process.exit(0);
   } catch (error) {
     console.error('❌ Migration error:', error.message);
@@ -92,3 +105,4 @@ const runMigrations = async () => {
 };
 
 runMigrations();
+

@@ -13,6 +13,13 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [idleWarning, setIdleWarning] = useState(false);
 
+  /** Persist user to localStorage and context state */
+  const updateUser = (updatedUser) => {
+    localStorage.setItem('user', JSON.stringify(updatedUser || null));
+    setUser(updatedUser || null);
+    return updatedUser;
+  };
+
   const clearSession = () => {
     STORAGE_KEYS.forEach((k) => localStorage.removeItem(k));
     setUser(null);
@@ -128,7 +135,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => clearSession();
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isAdmin, isOwner, isRenter, login, loginWithCredentials, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isAdmin, isOwner, isRenter, login, loginWithCredentials, register, logout, loading, updateUser }}>
       {children}
       {idleWarning && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-sm">

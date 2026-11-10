@@ -56,6 +56,11 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(100),
     allowNull: true
   },
+  // Owner's job title / role within their company (shown alongside company details)
+  position: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
   taxCertificate: {
     type: DataTypes.STRING(255),
     allowNull: true

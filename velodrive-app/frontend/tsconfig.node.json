@@ -4,12 +4,15 @@
     "moduleResolution": "bundler",
     "target": "ES2022",
     "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": false,
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "composite": true
   },
   "include": ["src"],
   "exclude": ["vite.config.js", "postcss.config.js", "tailwind.config.js"]

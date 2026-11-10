@@ -10,7 +10,7 @@ A complete vehicle rental platform supporting all vehicle types (motorcycle, car
 - **Document Uploads**: Certificate of registration, proof of ownership, original certificates, NBI clearance, tax certificates, valid ID, driver's license
 - **Owner Membership**: Php 2,500 one-time yearly platform fee + Php 250 service charge per booking
 - **E-Wallet**: Connected to bank account, withdrawable, supports refunds
-- **Split Payment Escrow**: AaaS-plus-transaction model â€” renter pays â†’ escrow â†’ split (owner 90%, admin 10%)
+- **Split Payment Escrow**: AaaS-plus-transaction model — renter pays â†’ escrow â†’ split (owner 90%, admin 10%)
 - **Rental Flow**: Pickup/return/destination points, number of days, fuel/damage/delay charges
 - **Admin Dashboard**: Monitor all transactions, users, vehicles, bookings, vehicle location tracking
 - **Owner Dashboard**: Manage vehicles, track bookings, earnings, vehicle location tracking
