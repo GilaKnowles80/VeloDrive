@@ -304,18 +304,6 @@ const getGPSHistory = async (req, res) => {
   }
 };
 
-module.exports = {
-  createVehicle,
-  getOwnerVehicles,
-  getAllVehicles,
-  getVehicleById,
-  updateVehicle,
-  updateGPSLocation,
-  getVehicleGPS,
-  getGPSHistory,
-  updateVehicleStatus,
-};
-
 const updateVehicleStatus = async (req, res) => {
   try {
     const vehicle = await Vehicle.findByPk(req.params.id);
@@ -341,4 +329,16 @@ const updateVehicleStatus = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+module.exports = {
+  createVehicle,
+  getOwnerVehicles,
+  getAllVehicles,
+  getVehicleById,
+  updateVehicle,
+  updateGPSLocation,
+  getVehicleGPS,
+  getGPSHistory,
+  updateVehicleStatus,
 };
