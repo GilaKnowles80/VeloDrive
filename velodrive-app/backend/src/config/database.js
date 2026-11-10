@@ -1,17 +1,51 @@
+'use strict';
+
 const { Sequelize } = require('sequelize');
 const pg = require('pg');
+const { EventEmitter } = require('events');
 require('dotenv').config();
 
+// pg v8.x changed query() to return a Promise instead of an EventEmitter (Query).
+// Sequelize 6.x expects query() to return an object with .on() AND .rows, .rowCount, etc.
+// Patch wraps Promise results in an EventEmitter and copies result properties onto it.
+function patchQueryResult(origQuery) {
+  return function (...args) {
+    const result = origQuery.apply(this, args);
+    if (result && typeof result.then === 'function' && !result.on) {
+      const emitter = new EventEmitter();
+      result.then((res) => {
+        if (res && res.rows && Array.isArray(res.rows)) {
+          emitter.rows = res.rows;
+          emitter.rowCount = res.rowCount;
+          emitter.command = res.command;
+          emitter.fields = res.fields;
+          for (const row of res.rows) {
+            emitter.emit('row', row);
+          }
+        }
+        emitter.emit('end', res);
+        emitter.emit('result', res);
+      }).catch((err) => {
+        emitter.emit('error', err);
+      });
+      return emitter;
+    }
+    return result;
+  };
+}
+
+const _originalClientQuery = pg.Client.prototype.query;
+const _originalPoolQuery = pg.Pool.prototype.query;
+pg.Client.prototype.query = patchQueryResult(_originalClientQuery);
+pg.Pool.prototype.query = patchQueryResult(_originalPoolQuery);
+
 // Support Neon serverless PostgreSQL connection string or individual params.
-// Use standard pg driver with Sequelize v6.
-// Neon connection strings often default to channel_binding=require which triggers
-// SASL authentication errors in node-postgres unless stripped.
-// SSL encryption is enforced via dialectOptions below.
 const rawDbUrl = process.env.DATABASE_URL;
 const dbUrl = rawDbUrl
   ? rawDbUrl
-      .replace(/([?&])channel_binding=[^&]*(&?)/gi, (_, p, amp) => (p === '?' && amp ? '?' : amp ? p : ''))
-      .replace(/[?&]$/, '')
+      .replace(/[?&]channel_binding=[^&]*/gi, '')
+      .replace(/&$/, '')
+      .replace(/\\\?$/, '')
   : rawDbUrl;
 
 const common = {
