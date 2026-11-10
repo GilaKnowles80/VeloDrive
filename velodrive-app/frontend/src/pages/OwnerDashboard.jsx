@@ -337,17 +337,6 @@ const OwnerDashboard = () => {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700 block">Vehicle Description</label>
-              <RichTextEditor
-                value={form.description}
-                onChange={(v) => setForm({ ...form, description: v })}
-                minHeight="140px"
-                className="w-full"
-              />
-              <p className="text-xs text-gray-500 mt-1">Design your description with bold, italic, font size, font family, and color.</p>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-700 block">OR (Certificate of Registration)</label>
