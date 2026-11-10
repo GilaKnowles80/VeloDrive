@@ -45,7 +45,7 @@ const normalizeType = (raw) => {
 
 const createVehicle = async (req, res) => {
   try {
-    const missing = ['type', 'make', 'model', 'year', 'color', 'licensePlate', 'description', 'pricePerDay']
+    const missing = ['type', 'make', 'model', 'year', 'color', 'licensePlate', 'pricePerDay']
       .filter((field) => String(req.body[field] ?? '').trim() === '');
     if (missing.length) {
       return res.status(400).json({ success: false, message: `Missing required fields: ${missing.join(', ')}` });
@@ -99,7 +99,7 @@ const createVehicle = async (req, res) => {
       color: req.body.color,
       licensePlate: req.body.licensePlate,
       vin: req.body.vin || null,
-      description: req.body.description,
+      description: req.body.description || '',
       specifications,
       pricePerDay: req.body.pricePerDay,
       pricePerHour: req.body.pricePerHour || 0,
