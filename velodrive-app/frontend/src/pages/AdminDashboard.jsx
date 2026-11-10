@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
-import { Users, Car, Wallet, Clock, MapPin } from 'lucide-react';
+import { Users, Car, Wallet, Clock, MapPin, Download } from 'lucide-react';
 import GPSMap from '../components/GPSMap';
 
 const AdminDashboard = () => {
@@ -11,6 +11,28 @@ const AdminDashboard = () => {
   const [recentBookings, setRecentBookings] = useState([]);
   const [allVehicles, setAllVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const exportTransactions = async () => {
+    try {
+      const resp = await api.get('/admin/transactions/export', {
+        responseType: 'blob',
+      });
+      const blob = new Blob([resp.data], { type: 'text/csv; charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const disposition = resp.headers['content-disposition'] || '';
+      const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+      a.download = filenameMatch ? filenameMatch[1] : 'velodrive_transactions.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Failed to export transactions. Please try again.');
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -69,7 +91,18 @@ const AdminDashboard = () => {
         </div>
 
         <div className="card">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">All Bookings</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">All Bookings</h2>
+              <p className="text-sm text-gray-500">Export your transaction history to CSV for record-keeping</p>
+            </div>
+            <button
+              onClick={exportTransactions}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Download className="w-4 h-4" /> Export CSV
+            </button>
+          </div>
           {loading ? (
             <div className="h-64 flex items-center justify-center">Loading...</div>
           ) : recentBookings.length > 0 ? (

@@ -163,6 +163,63 @@ const getAllTransactions = async (req, res) => {
   }
 };
 
+const exportTransactions = async (req, res) => {
+  try {
+    const transactions = await Transaction.findAll({
+      include: [{ model: User, attributes: ['id', 'firstName', 'lastName', 'email', 'role'] }],
+      order: [['createdAt', 'DESC']],
+      limit: 10000,
+    });
+
+    // Build CSV header
+    const headers = [
+      'Reference', 'Type', 'Status', 'Amount (PHP)', 'Currency',
+      'User ID', 'User Name', 'User Email', 'User Role',
+      'Booking ID', 'Description', 'Created At'
+    ];
+
+    const rows = transactions.map((t) => {
+      const u = t.User || {};
+      const createdAt = t.createdAt ? new Date(t.createdAt).toISOString() : '';
+      return [
+        t.reference || '',
+        t.type || '',
+        t.status || '',
+        t.amount || 0,
+        t.currency || 'PHP',
+        u.id || '',
+        `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+        u.email || '',
+        u.role || '',
+        t.bookingId || '',
+        (t.description || '').replace(/"/g, '""'),
+        createdAt,
+      ];
+    });
+
+    // Escape fields that contain commas, quotes, or newlines
+    const escapeCell = (cell) => {
+      const s = String(cell == null ? '' : cell);
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+
+    const csvContent = [
+      headers.map(escapeCell).join(','),
+      ...rows.map((row) => row.map(escapeCell).join(',')),
+    ].join('\n');
+
+    const filename = `velodrive_transactions_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.send(csvContent);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getAllUsers,
@@ -171,4 +228,5 @@ module.exports = {
   verifyVehicle,
   suspendUser,
   getAllTransactions,
+  exportTransactions,
 };
