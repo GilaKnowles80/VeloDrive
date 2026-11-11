@@ -7,59 +7,59 @@ const User = sequelize.define('User', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
-    primaryKey: true
+    primaryKey: true,
   },
   role: {
     type: DataTypes.ENUM('admin', 'owner', 'renter'),
-    allowNull: false
+    allowNull: false,
   },
   firstName: {
     type: DataTypes.STRING(100),
-    allowNull: false
+    allowNull: false,
   },
   lastName: {
     type: DataTypes.STRING(100),
-    allowNull: false
+    allowNull: false,
   },
   email: {
     type: DataTypes.STRING(255),
     allowNull: false,
     unique: true,
-    validate: { isEmail: true }
+    validate: { isEmail: true },
   },
   password: {
     type: DataTypes.STRING(255),
-    allowNull: false
+    allowNull: false,
   },
   phone: {
     type: DataTypes.STRING(20),
-    allowNull: false
+    allowNull: false,
   },
   address: {
     type: DataTypes.TEXT,
-    allowNull: false
+    allowNull: false,
   },
   // Vehicle owner business details (shown alongside vehicle listings)
   companyName: {
     type: DataTypes.STRING(255),
-    allowNull: true
+    allowNull: true,
   },
   companyAddress: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
   },
   contactNumber: {
     type: DataTypes.STRING(50),
-    allowNull: true
+    allowNull: true,
   },
   contactPerson: {
     type: DataTypes.STRING(100),
-    allowNull: true
+    allowNull: true,
   },
   // Owner's job title / role within their company (shown alongside company details)
   position: {
     type: DataTypes.STRING(100),
-    allowNull: true
+    allowNull: true,
   },
   taxCertificate: {
     type: DataTypes.STRING(255),
