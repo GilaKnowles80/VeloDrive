@@ -395,22 +395,20 @@ const OwnerDashboard = () => {
                 <label className="text-xs font-medium text-gray-700">VIN (optional)</label>
                 <input className="input-field" placeholder="VIN" value={form.vin} onChange={(e)=>setForm({...form, vin:e.target.value})} />
               </div>
-              <div className="space-y-1">
+              <div className="md:col-span-3 space-y-1.5">
                 <label className="text-xs font-medium text-gray-700 block">Company Details</label>
-                <div className="space-y-2">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                    <div className="md:col-span-2 space-y-1">
-                      <input className="input-field" placeholder="Company Name" value={companyForm.companyName} onChange={(e)=>setCompanyForm({...companyForm, companyName:e.target.value})} />
-                      <input className="input-field" placeholder="Company Address" value={companyForm.companyAddress} onChange={(e)=>setCompanyForm({...companyForm, companyAddress:e.target.value})} />
-                    </div>
-                    <div className="md:col-span-1 space-y-1">
-                      <input className="input-field" placeholder="Contact Person" value={companyForm.contactPerson} onChange={(e)=>setCompanyForm({...companyForm, contactPerson:e.target.value})} />
-                      <input className="input-field" placeholder="Contact Phone Number" value={companyForm.contactNumber} onChange={(e)=>setCompanyForm({...companyForm, contactNumber:e.target.value})} />
-                    </div>
-                    <div className="md:col-span-1 space-y-1">
-                      <input className="input-field" placeholder="Position" value={companyForm.position} onChange={(e)=>setCompanyForm({...companyForm, position:e.target.value})} />
-                      <input className="input-field" type="email" placeholder="Email Address" value={companyForm.email} readOnly />
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div className="md:col-span-2 space-y-2">
+                    <input className="input-field" placeholder="Company Name" value={companyForm.companyName} onChange={(e)=>setCompanyForm({...companyForm, companyName:e.target.value})} />
+                    <input className="input-field" placeholder="Company Address" value={companyForm.companyAddress} onChange={(e)=>setCompanyForm({...companyForm, companyAddress:e.target.value})} />
+                  </div>
+                  <div className="md:col-span-1 space-y-2">
+                    <input className="input-field" placeholder="Contact Person" value={companyForm.contactPerson} onChange={(e)=>setCompanyForm({...companyForm, contactPerson:e.target.value})} />
+                    <input className="input-field" placeholder="Contact Number" value={companyForm.contactNumber} onChange={(e)=>setCompanyForm({...companyForm, contactNumber:e.target.value})} />
+                  </div>
+                  <div className="md:col-span-1 space-y-2">
+                    <input className="input-field" placeholder="Position" value={companyForm.position} onChange={(e)=>setCompanyForm({...companyForm, position:e.target.value})} />
+                    <input className="input-field" type="email" placeholder="Email Address" value={companyForm.email} readOnly />
                   </div>
                 </div>
               </div>
