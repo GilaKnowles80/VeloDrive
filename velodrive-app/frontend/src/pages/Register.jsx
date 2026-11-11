@@ -201,8 +201,11 @@ const Register = () => {
             <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-sky-500">
               <option value="renter">Renter</option>
               <option value="owner">Vehicle Owner</option>
-              <option value="admin">Admin</option>
             </select>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Admin accounts are provisioned separately. Existing admins should{' '}
+              <Link to="/login" className="text-sky-600 font-semibold hover:underline">sign in here</Link>.
+            </p>
           </div>
           <label className="flex items-start gap-2 text-xs text-slate-600">
             <input type="checkbox" checked={formData.gdprConsent} onChange={(e) => setFormData({ ...formData, gdprConsent: e.target.checked })} required />

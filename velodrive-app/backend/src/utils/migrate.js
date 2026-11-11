@@ -16,6 +16,7 @@ const runMigrations = async () => {
       ADD COLUMN IF NOT EXISTS "password" VARCHAR(255),
       ADD COLUMN IF NOT EXISTS "phone" VARCHAR(20) DEFAULT '',
       ADD COLUMN IF NOT EXISTS "address" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS position VARCHAR(100),
       ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
       ADD COLUMN IF NOT EXISTS paypal_email VARCHAR(255),
@@ -47,7 +48,7 @@ const runMigrations = async () => {
     `);
     console.log('✅ Users table aligned with unique id constraint');
 
-    // Ensure vehicles table has unique id constraint
+    // Ensure vehicles table has unique id constraint and synced type/owner_id
     await sequelize.query(`
       ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS "id" UUID DEFAULT gen_random_uuid();
       DO $$
@@ -58,6 +59,8 @@ const runMigrations = async () => {
           ALTER TABLE vehicles ADD CONSTRAINT vehicles_id_unique UNIQUE ("id");
         END IF;
       END $$;
+      UPDATE vehicles SET type = vehicle_type::text::enum_vehicles_type WHERE type IS NULL AND vehicle_type IS NOT NULL;
+      UPDATE vehicles SET "ownerId" = owner_id WHERE "ownerId" IS NULL AND owner_id IS NOT NULL;
     `);
     console.log('✅ Vehicles table aligned with unique id constraint');
 
@@ -81,22 +84,9 @@ const runMigrations = async () => {
       ADD COLUMN IF NOT EXISTS service_charge_fee DECIMAL(12, 2) DEFAULT 250.00,
       ADD COLUMN IF NOT EXISTS owner_payout DECIMAL(12, 2) DEFAULT 0.00;
     `);
-    console.log('✅ Added service_charge_amount and owner_payout to bookings table');
-    // Add position column to users table (owner job title)
-    await sequelize.query(
-      ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS position VARCHAR(100);
-    );
-    console.log('✅ Added position column to users table');
+    console.log('✅ Added service_charge_fee and owner_payout to bookings table');
 
-        // Add position column to users table (owner job title)
-    await sequelize.query(`
-      ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS position VARCHAR(100);
-    `);
-    console.log('Added position column to users table');
-
-console.log('✅ All migrations completed successfully');
+    console.log('✅ All migrations completed successfully');
     process.exit(0);
   } catch (error) {
     console.error('❌ Migration error:', error.message);
@@ -105,4 +95,3 @@ console.log('✅ All migrations completed successfully');
 };
 
 runMigrations();
-

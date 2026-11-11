@@ -15,8 +15,8 @@ const GPSLocation = require('./GPSLocation');
 const RefreshToken = require('./RefreshToken');
 
 // Associations
-User.hasMany(Vehicle, { foreignKey: 'ownerId', onDelete: 'CASCADE' });
-Vehicle.belongsTo(User, { foreignKey: 'ownerId' });
+User.hasMany(Vehicle, { foreignKey: 'owner_id', as: 'vehicles', onDelete: 'CASCADE' });
+Vehicle.belongsTo(User, { foreignKey: 'owner_id', as: 'owner' });
 
 User.hasMany(Booking, { foreignKey: 'renterId', onDelete: 'CASCADE' });
 User.hasMany(Booking, { foreignKey: 'ownerId', onDelete: 'CASCADE' });

@@ -268,8 +268,8 @@ const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Admin login requires OTP verification (two-step: password -> OTP -> tokens)
-    if (user.role === 'admin') {
+    // Admin login requires OTP verification (two-step: password -> OTP -> tokens) unless OTP_BYPASS is true
+    if (user.role === 'admin' && !OTP_BYPASS) {
       const now = new Date();
       const quota = consumeOtpSendQuota(user, now);
       if (!quota.ok) {

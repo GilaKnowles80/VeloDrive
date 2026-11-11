@@ -7,12 +7,14 @@ const Vehicle = sequelize.define('Vehicle', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
-    primaryKey: true
+    primaryKey: true,
+    field: 'id'
   },
   ownerId: {
     type: DataTypes.UUID,
     allowNull: false,
-    references: { model: 'users', key: 'id' }
+    references: { model: 'users', key: 'id' },
+    field: 'owner_id'
   },
   // Full list of vehicle types supported
   type: {
