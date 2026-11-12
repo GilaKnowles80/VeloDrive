@@ -36,9 +36,22 @@ const app = express();
 app.disable('x-powered-by');
 
 const requiredEnv = () => {
-  const base = ['DATABASE_URL', 'JWT_SECRET'];
-  const prod = process.env.NODE_ENV === 'production' || process.env.VERCEL ? ['FRONTEND_URL'] : [];
-  return [...base, ...prod];
+  const base = ['JWT_SECRET'];
+  const isProduction = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
+  const hasEmailProvider = Boolean(
+    process.env.RESEND_API_KEY || (process.env.EMAIL_USER && process.env.EMAIL_PASS)
+  );
+  if (!process.env.NEON_POSTGRES_URL && !process.env.DATABASE_URL) {
+    base.push('DATABASE_URL or NEON_POSTGRES_URL');
+  }
+  if (isProduction) {
+    if (!process.env.FRONTEND_URL) base.push('FRONTEND_URL');
+    if (!hasEmailProvider) base.push('RESEND_API_KEY or EMAIL_USER/EMAIL_PASS');
+    if (process.env.RESEND_API_KEY && !(process.env.FROM_EMAIL || process.env.EMAIL_FROM)) {
+      base.push('FROM_EMAIL or EMAIL_FROM');
+    }
+  }
+  return base;
 };
 const envCheck = () => {
   const missing = requiredEnv().filter((k) => !process.env[k]);
@@ -54,7 +67,8 @@ app.use(morgan(process.env.NODE_ENV === 'production'
 
 // Security & middleware
 app.use(helmet());
-const allowedOrigins = (process.env.FRONTEND_URL || 'https://www.gctravelandtour.com,https://frontend-2o4j.vercel.app,http://localhost:3000')
+const localOrigins = process.env.VERCEL ? '' : 'http://localhost:3000';
+const allowedOrigins = (process.env.FRONTEND_URL || localOrigins)
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
@@ -115,7 +129,7 @@ const ensureDb = async () => {
   return dbReady;
 };
 app.use(async (req, res, next) => {
-  if (req.path === '/api/health' || req.path === '/api/ready') return next();
+  if (req.path === '/' || req.path === '/api/health' || req.path === '/api/ready') return next();
   try {
     await ensureDb();
     next();

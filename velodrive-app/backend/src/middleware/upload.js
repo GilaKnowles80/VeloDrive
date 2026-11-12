@@ -52,22 +52,34 @@ const storage = useS3
   : multer.memoryStorage();
 
 const isAdImageField = (field) => ['adCampaignImage', 'adImages'].includes(field);
+const isDocumentField = (field) => ['or', 'proofOfOwnership', 'cr', 'file'].includes(field);
 
 const fileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (isDocumentField(file.fieldname)) {
+    const ok = ext === '.pdf' && file.mimetype === 'application/pdf';
+    if (ok) return cb(null, true);
+    return cb(new Error('Uploaded documents must be PDF files'), false);
+  }
+
   if (isAdImageField(file.fieldname)) {
-    const ok = /jpeg|jpg|png/.test(path.extname(file.originalname).toLowerCase()) && /image\/(jpeg|png)/.test(file.mimetype);
+    const ok = ['.jpeg', '.jpg', '.png'].includes(ext) && ['image/jpeg', 'image/png'].includes(file.mimetype);
     if (ok) return cb(null, true);
     return cb(new Error('Vehicle ad images must be PNG or JPEG (1–10 images)'), false);
   }
 
-  const allowed = /jpeg|jpg|png|pdf|mp4|mov|avi|doc|docx/;
-  const ext = allowed.test(path.extname(file.originalname).toLowerCase());
-  const mime = allowed.test(file.mimetype);
-  if (ext && mime) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only images, PDFs, and videos are allowed'), false);
+  if (file.fieldname === 'adCampaignVideo') {
+    const videoMimes = {
+      '.mp4': 'video/mp4',
+      '.mov': 'video/quicktime',
+      '.avi': 'video/x-msvideo',
+    };
+    if (videoMimes[ext] === file.mimetype) return cb(null, true);
+    return cb(new Error('Vehicle ad videos must be MP4, MOV, or AVI files'), false);
   }
+
+  return cb(new Error('Unsupported vehicle upload file type'), false);
 };
 
 const upload = multer({

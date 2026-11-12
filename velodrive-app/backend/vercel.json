@@ -1,5 +1,14 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "src/server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["node_modules/pg/**", "node_modules/pg-hstore/**"]
+      }
+    }
+  ],
   "routes": [
     { "src": "/(.*)", "dest": "src/server.js" }
   ]

@@ -1,15 +1,15 @@
 'use strict';
 
 const { Sequelize } = require('sequelize');
+const pg = require('pg');
 require('dotenv').config();
 
-// Support Neon serverless PostgreSQL connection string or individual params.
-const rawDbUrl = process.env.DATABASE_URL;
+// Prefer the connection string provided by the Neon Vercel integration.
+const rawDbUrl = process.env.NEON_POSTGRES_URL || process.env.DATABASE_URL;
 let dbUrl = rawDbUrl;
 if (dbUrl) {
-  // Remove channel_binding param (Neon-specific, not needed by Sequelize/pg)
-  dbUrl = dbUrl.replace(/[?&]channel_binding=[^&]*/gi, '');
-  // If channel_binding was the first param, the '?' was consumed; restore it
+  // TLS is configured below; remove URL flags that conflict with pg's SSL parser.
+  dbUrl = dbUrl.replace(/[?&](?:channel_binding|sslmode)=[^&]*/gi, '');
   if (!dbUrl.includes('?') && dbUrl.includes('&')) {
     dbUrl = dbUrl.replace('&', '?');
   }
@@ -18,6 +18,7 @@ if (dbUrl) {
 
 const common = {
   dialect: 'postgres',
+  dialectModule: pg,
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: {
     max: 10,

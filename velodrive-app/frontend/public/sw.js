@@ -5,6 +5,10 @@ const STATIC_ASSETS = [
   '/logo.jpg',
   '/paypal-logo.png',
 ];
+const offlineResponse = () => new Response('VeloDrive is unavailable while offline.', {
+  status: 503,
+  headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+});
 
 // Install event - cache static assets (NOT index.html - always fetch fresh)
 self.addEventListener('install', (event) => {
@@ -57,7 +61,10 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(request))
+        .catch(async () => {
+          const cachedPage = await caches.match(request) || await caches.match('/index.html');
+          return cachedPage || offlineResponse();
+        })
     );
     return;
   }
@@ -77,11 +84,7 @@ self.addEventListener('fetch', (event) => {
             }
             return response;
           })
-          .catch(() => {
-            if (request.destination === 'document') {
-              return caches.match('/index.html');
-            }
-          });
+          .catch(() => offlineResponse());
       })
   );
 });
