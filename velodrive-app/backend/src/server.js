@@ -89,6 +89,19 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Backend root is a deployment check; the frontend is hosted separately.
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'velodrive-api',
+    health: '/api/health',
+    readiness: '/api/ready',
+  });
+});
+
+// Browsers request a favicon even on this API-only host.
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // Health (liveness) - fast, no DB
 app.get('/api/health', (req, res) => {
   res.status(200).json({ 
@@ -128,8 +141,7 @@ const ensureDb = async () => {
   }
   return dbReady;
 };
-app.use(async (req, res, next) => {
-  if (req.path === '/' || req.path === '/api/health' || req.path === '/api/ready') return next();
+app.use('/api', async (req, res, next) => {
   try {
     await ensureDb();
     next();
