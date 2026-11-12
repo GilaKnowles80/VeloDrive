@@ -77,7 +77,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health (liveness) - fast, no DB
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'velodrive-api', uptime: process.uptime(), ts: new Date().toISOString(), requestId: req.id });
+  res.status(200).json({ 
+    status: 'ok', service: 'velodrive-api', uptime: process.uptime(), ts: new Date().toISOString(), requestId: req.id });
 });
 
 // Readiness - DB connectivity + required env checks (for uptime monitors/deploy gates)
