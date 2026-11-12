@@ -133,7 +133,7 @@ const ensureDb = async () => {
   if (!dbReady) {
     dbReady = (async () => {
       await connectDB();
-      await sequelize.sync({ alter: { drop: false } });
+      await sequelize.sync();
     })().catch((e) => {
       dbReady = null;
       throw e;
