@@ -3,7 +3,7 @@ const { Wallet, Transaction, User } = require('../models');
 const { sequelize } = require('../config/database');
 
 const MIN_AMOUNT = 1;
-const MAX_AMOUNT = 100000;
+const MAX_AMOUNT = 10000000;
 
 const buildReference = (prefix) => `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
 
@@ -256,7 +256,7 @@ const capturePayment = async ({ userId, paymentMethod, referenceId, confirmCode 
 
       const amount = Number(tx.amount);
       const result = await sequelize.transaction(async (t) => {
-        const wallet = await Wallet.findOne({ where: { userId }, transaction: t });
+        let wallet = await Wallet.findOne({ where: { userId }, transaction: t });
         if (!wallet) {
           const w = await Wallet.create({ userId, balance: 0.0 }, { transaction: t });
           wallet = w;
