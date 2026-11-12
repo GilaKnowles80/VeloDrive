@@ -212,7 +212,7 @@ const capturePayment = async ({ userId, paymentMethod, referenceId, confirmCode 
       }
 
       const result = await sequelize.transaction(async (t) => {
-        const wallet = await Wallet.findOne({ where: { userId }, transaction: t });
+        let wallet = await Wallet.findOne({ where: { userId }, transaction: t });
         if (!wallet) {
           const w = await Wallet.create({ userId, balance: 0.0 }, { transaction: t });
           wallet = w;
