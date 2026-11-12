@@ -1,3 +1,5 @@
+'use strict';
+
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
@@ -26,13 +28,14 @@ const ensureDir = (dir) => {
   }
 };
 
-// Create upload directories at module load time (local dev only)
-// Uses absolute paths so they resolve regardless of working directory.
+// Create upload directories only in non-production environments to avoid Vercel read-only filesystem errors
 const uploadsRoot = path.resolve(__dirname, '..', 'uploads');
-ensureDir(uploadsRoot);
-ensureDir(path.resolve(uploadsRoot, 'ads'));
-ensureDir(path.resolve(uploadsRoot, 'documents'));
-ensureDir(path.resolve(uploadsRoot, 'profile'));
+if (process.env.NODE_ENV !== 'production') {
+  ensureDir(uploadsRoot);
+  ensureDir(path.resolve(uploadsRoot, 'ads'));
+  ensureDir(path.resolve(uploadsRoot, 'documents'));
+  ensureDir(path.resolve(uploadsRoot, 'profile'));
+}
 
 const storage = useS3
   ? multerS3({
