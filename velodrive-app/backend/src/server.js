@@ -127,13 +127,12 @@ app.get('/api/ready', async (req, res) => {
   });
 });
 
-// Ensure DB tables exist (safe for serverless cold starts; idempotent)
+// Connect once per serverless instance; schema changes run through `npm run migrate`.
 let dbReady;
 const ensureDb = async () => {
   if (!dbReady) {
     dbReady = (async () => {
       await connectDB();
-      await sequelize.sync();
     })().catch((e) => {
       dbReady = null;
       throw e;
@@ -179,8 +178,6 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   if (process.env.VERCEL) return;
   await connectDB();
-  await sequelize.sync({ alter: { drop: false } });
-  console.log(JSON.stringify({ level: 'info', msg: 'db_synchronized' }));
 
   app.listen(PORT, () => {
     console.log(JSON.stringify({ level: 'info', msg: 'server_started', port: Number(PORT) }));
