@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import { ShieldCheck } from 'lucide-react';
 
@@ -9,13 +9,38 @@ const MEMBERSHIP_PLANS = [
 ];
 
 const OwnerMembership = () => {
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState(null);
   const [message, setMessage] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('yearly');
   const [payingPlan, setPayingPlan] = useState(null);
+  const [paymentResult, setPaymentResult] = useState('');
 
   const plan = MEMBERSHIP_PLANS.find((p) => p.id === selectedPlan);
+
+  useEffect(() => {
+    const orderId = searchParams.get('token');
+    if (!orderId) {
+      if (searchParams.get('cancelled') === '1') setPaymentResult('PayPal checkout was cancelled. No membership payment was completed.');
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+    api.post('/paypal/capture', { orderId })
+      .then(() => {
+        if (active) setPaymentResult('Membership payment completed and confirmed by PayPal.');
+      })
+      .catch((error) => {
+        if (active) setPaymentResult(error.response?.data?.message || 'Membership payment could not be confirmed.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [searchParams]);
 
   const handleMembershipPay = async (e) => {
     e.preventDefault();
@@ -23,11 +48,7 @@ const OwnerMembership = () => {
     setMessage('');
     setPayingPlan(selectedPlan);
     try {
-      const resp = await api.post('/owners/membership', {
-        amount: plan.amount,
-        currency: 'PHP',
-        billingCycle: selectedPlan,
-      });
+      const resp = await api.post('/owners/membership', { billingCycle: selectedPlan });
 
       if (resp.data.success && resp.data.approvalUrl) {
         setPaymentUrl(resp.data.approvalUrl);
@@ -79,6 +100,12 @@ const OwnerMembership = () => {
             Payment is processed securely via PayPal to gctravelandtours2021@gmail.com.
           </div>
         </div>
+
+        {paymentResult && (
+          <div className={`mb-6 p-4 rounded-lg text-sm ${paymentResult.includes('completed') ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
+            {paymentResult}
+          </div>
+        )}
 
         <form onSubmit={handleMembershipPay} className="space-y-4">
           <div className="flex justify-between items-center mb-2">

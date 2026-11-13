@@ -19,6 +19,7 @@ import OwnerMembership from './pages/OwnerMembership';
 import RenterDashboard from './pages/RenterDashboard';
 import BookingSuccess from './pages/BookingSuccess';
 import BookingCancel from './pages/BookingCancel';
+import Checkout from './pages/Checkout';
 import Vehicles from './pages/Vehicles';
 import Wallet from './pages/Wallet';
 import Profile from './pages/Profile';
@@ -52,6 +53,7 @@ function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/vehicles" element={<Vehicles />} />
+          <Route path="/checkout" element={<ProtectedRoute allowedRoles={['renter', 'admin']}><RenterOnly><Checkout /></RenterOnly></ProtectedRoute>} />
           <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
@@ -94,7 +96,7 @@ function App() {
           />
 
           {/* Booking Success/Cancel */}
-          <Route path="/booking-success/:id" element={<BookingSuccess />} />
+          <Route path="/booking-success/:id" element={<ProtectedRoute allowedRoles={['renter', 'admin']}><RenterOnly><BookingSuccess /></RenterOnly></ProtectedRoute>} />
           <Route path="/booking-cancel/:id" element={<BookingCancel />} />
         </Routes>
         <Footer />

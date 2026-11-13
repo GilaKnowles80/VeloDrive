@@ -9,12 +9,10 @@ const { processOwnerMembership } = require('../services/paypalService');
  */
 router.post('/membership', protect, authorize('owner'), async (req, res) => {
   try {
-    const { amount = 4999, currency = 'PHP', billingCycle = 'yearly' } = req.body;
+    const { billingCycle = 'yearly' } = req.body;
 
     const result = await processOwnerMembership({
       ownerId: req.user.id,
-      amount,
-      currency,
       billingCycle
     });
 

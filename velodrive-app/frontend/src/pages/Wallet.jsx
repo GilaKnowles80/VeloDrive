@@ -1,16 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
-import { Wallet, Send, ArrowDown, Banknote, Smartphone } from 'lucide-react';
-
-const PAYMENT_METHODS = [
-  { id: 'paypal', label: 'PayPal', color: 'bg-blue-500' },
-  { id: 'gcash', label: 'GCash', color: 'bg-green-500' },
-  { id: 'bank_transfer', label: 'Bank Transfer', color: 'bg-indigo-500' },
-];
+import { useSearchParams } from 'react-router-dom';
+import { Wallet, Send, ArrowDown, Banknote } from 'lucide-react';
 
 const WalletPage = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const handledOrder = useRef(null);
   const [wallet, setWallet] = useState({ balance: 0, bankAccountName: '', bankAccountNumber: '', bankName: '' });
   const [paymentAccount, setPaymentAccount] = useState({
     bankAccountName: '', bankAccountNumber: '', bankName: '', gcashNumber: '', paymentPreference: '', paypalEmail: '', paypalVerified: false,
@@ -18,10 +15,9 @@ const WalletPage = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
-  const [topupMethod, setTopupMethod] = useState('paypal');
   const [form, setForm] = useState({ amount: '', method: 'paypal', bankName: '', bankAccountName: '', bankAccountNumber: '', gcashNumber: '', paymentPreference: '', paypalEmail: '' });
   const [captureLoading, setCaptureLoading] = useState(false);
-  const [instructions, setInstructions] = useState(null);
+  const [topupNotice, setTopupNotice] = useState('');
 
   const loadData = async () => {
     try {
@@ -38,7 +34,35 @@ const WalletPage = () => {
 
   useEffect(() => { loadData(); }, []);
 
-  const openTopup = () => { setModal('topup'); setForm({ amount: '', method: 'paypal', bankName: '', bankAccountName: '', bankAccountNumber: '', gcashNumber: '', paymentPreference: '', paypalEmail: '' }); setInstructions(null); };
+  useEffect(() => {
+    const topupStatus = searchParams.get('topup');
+    const orderId = searchParams.get('token');
+    if (topupStatus === 'cancelled') {
+      setTopupNotice('PayPal checkout was cancelled. Your wallet was not credited.');
+      return;
+    }
+    if (topupStatus !== 'success' || !orderId || handledOrder.current === orderId) return;
+
+    handledOrder.current = orderId;
+    setCaptureLoading(true);
+    api.post('/wallet/topup/capture', { orderId })
+      .then(async (response) => {
+        setTopupNotice(response.data.alreadyProcessed ? 'This PayPal top-up was already credited.' : `PayPal top-up of Php ${Number(response.data.amount).toFixed(2)} completed.`);
+        try {
+          const walletResponse = await api.get('/wallet/');
+          setWallet(walletResponse.data.wallet || {});
+          setTransactions(walletResponse.data.transactions || []);
+        } catch (error) {
+          console.error('Wallet refresh failed after PayPal capture', error);
+        }
+      })
+      .catch((error) => {
+        setTopupNotice(error.response?.data?.message || 'PayPal could not confirm this top-up. Contact support before retrying payment.');
+      })
+      .finally(() => setCaptureLoading(false));
+  }, [searchParams]);
+
+  const openTopup = () => { setModal('topup'); setForm({ ...form, amount: '' }); setTopupNotice(''); };
   const openWithdraw = () => { setModal('withdraw'); setForm({ amount: '' }); };
   const openAccount = () => {
     setForm({
@@ -57,63 +81,11 @@ const WalletPage = () => {
     if (e) e.preventDefault();
     setCaptureLoading(true);
     try {
-      const resp = await api.post('/payments/create', {
-        amount: form.amount,
-        paymentMethod: form.method,
-      });
-
-      if (!resp.data.success) {
-        if (resp.data.requiresSetup) {
-          setInstructions({ error: resp.data.message, requiresSetup: true });
-          return;
-        }
-        throw new Error(resp.data.message || 'Top-up failed');
-      }
-
-      const data = resp.data;
-
-      if (data.paymentMethod === 'paypal' && data.redirectUrl) {
-        window.location.href = data.redirectUrl;
-      } else if (data.paymentMethod === 'gcash' || data.paymentMethod === 'bank_transfer') {
-        setInstructions({
-          paymentMethod: data.paymentMethod,
-          reference: data.referenceId,
-          amount: data.amount,
-          instructions: data.instructions,
-          gcashNumber: data.gcashNumber,
-          bankName: data.bankName,
-          bankAccountName: data.bankAccountName,
-          bankAccountNumber: data.bankAccountNumber,
-        });
-        closeModal();
-        loadData();
-      }
+      const resp = await api.post('/wallet/topup', { amount: form.amount });
+      if (!resp.data.success || !resp.data.approvalUrl) throw new Error(resp.data.message || 'Could not start PayPal checkout.');
+      window.location.assign(resp.data.approvalUrl);
     } catch (err) {
-      alert(err.response?.data?.message || 'Top-up failed');
-    } finally {
-      setCaptureLoading(false);
-    }
-  };
-
-  const handleCapture = async (e) => {
-    e.preventDefault();
-    setCaptureLoading(true);
-    try {
-      const resp = await api.post('/payments/capture', {
-        paymentMethod: form.method,
-        referenceId: instructions?.reference,
-        confirmCode: e.target.elements.confirmCode?.value || '',
-      });
-
-      if (!resp.data.success) {
-        throw new Error(resp.data.message || 'Verification failed');
-      }
-
-      setInstructions(null);
-      closeModal();
-      loadData();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Verification failed');
+      setTopupNotice(err.response?.data?.message || err.message || 'Top-up failed');
     } finally {
       setCaptureLoading(false);
     }
@@ -171,7 +143,7 @@ const WalletPage = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">E-Wallet</h1>
-            <p className="text-gray-600">Top up via PayPal, GCash, or bank transfer. Withdrawable to your bank account.</p>
+            <p className="text-gray-600">Top up securely via PayPal. Withdrawals are sent to your bank account.</p>
           </div>
           <span className="mt-4 md:mt-0 px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
             {user.firstName} {user.lastName}
@@ -212,8 +184,14 @@ const WalletPage = () => {
               <p><strong>Preferred Method:</strong> {paymentAccount.paymentPreference || 'Not set'}</p>
               <p><strong>PayPal Email:</strong> {paymentAccount.paypalEmail || 'Not set'}</p>
             </div>
-            <p className="mt-3 text-xs text-gray-500">Set your preferred payment method to enable GCash and bank transfer top-ups.</p>
+            <p className="mt-3 text-xs text-gray-500">PayPal is the only supported wallet top-up method. Bank details are used for withdrawals.</p>
           </div>
+
+          {topupNotice && (
+            <div className={`mb-6 rounded-lg border p-4 text-sm ${topupNotice.includes('completed') || topupNotice.includes('already credited') ? 'border-green-200 bg-green-50 text-green-800' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+              {topupNotice}
+            </div>
+          )}
 
           <div className="card">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Platform Fee Info</h3>
@@ -273,97 +251,29 @@ const WalletPage = () => {
             </button>
 
             {modal === 'topup' && (
-              <div className="space-y-4">
+              <form onSubmit={handleTopUp} className="space-y-4">
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Top Up Wallet</h2>
-                {!instructions && (
-                  <div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Amount (PHP)</label>
-                      <input
-                        className="input-field"
-                        type="number"
-                        value={form.amount}
-                        onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                        required
-                        min="1"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Payment Method</label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {PAYMENT_METHODS.map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => setTopupMethod(m.id)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium border transition ${topupMethod === m.id ? `${m.color} text-white border-${m.color.replace('bg-', '')}` : 'bg-gray-50 text-gray-700 border-gray-200'}`}
-                          >
-                            {m.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {instructions && instructions.requiresSetup && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                        {instructions.error}
-                      </div>
-                    )}
-                    <div className="flex gap-3">
-                      <button type="button" className="btn-secondary flex-1" onClick={closeModal}>Cancel</button>
-                      <button type="button" className="btn-primary flex-1" onClick={handleTopUp} disabled={captureLoading}>
-                        {captureLoading ? 'Creating...' : 'Continue to Payment'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {instructions && !instructions.requiresSetup && (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-800"><strong>Reference:</strong> {instructions.reference}</p>
-                      <p className="text-sm text-blue-800"><strong>Amount:</strong> Php {instructions.amount.toFixed(2)}</p>
-                      <p className="text-sm text-blue-800">{instructions.instructions}</p>
-                    </div>
-                    {instructions.paymentMethod === 'gcash' && (
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(instructions.gcashNumber || '');
-                            alert('GCash number copied to clipboard');
-                          }}
-                          className="flex-1 bg-green-100 text-green-700 text-sm px-4 py-2 rounded-lg font-medium"
-                        >
-                          <Smartphone className="w-4 h-4 mr-2" /> Copy GCash Number
-                        </button>
-                      </div>
-                    )}
-                    {instructions.paymentMethod === 'bank_transfer' && (
-                      <div className="space-y-2">
-                        <p className="text-sm text-gray-700"><strong>Bank:</strong> {instructions.bankName}</p>
-                        <p className="text-sm text-gray-700"><strong>Account Name:</strong> {instructions.bankAccountName}</p>
-                        <p className="text-sm text-gray-700"><strong>Account Number:</strong> {instructions.bankAccountNumber}</p>
-                      </div>
-                    )}
-                    <form onSubmit={handleCapture} className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">Confirmation Code (optional)</label>
-                        <input
-                          name="confirmCode"
-                          type="text"
-                          className="input-field"
-                          placeholder="Enter reference or confirmation code"
-                        />
-                      </div>
-                      <button type="submit" className="w-full btn-primary" disabled={captureLoading}>
-                        {captureLoading ? 'Verifying...' : 'I Have Completed the Payment'}
-                      </button>
-                    </form>
-                    <div className="flex gap-3">
-                      <button type="button" className="btn-secondary flex-1" onClick={() => setInstructions(null)}>Back</button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Amount (PHP)</label>
+                  <input
+                    className="input-field"
+                    type="number"
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    required
+                    min="1"
+                    max="100000"
+                    step="0.01"
+                  />
+                </div>
+                <p className="text-sm text-gray-600">Your wallet is credited only after VeloDrive verifies the PayPal capture.</p>
+                <div className="flex gap-3">
+                  <button type="button" className="btn-secondary flex-1" onClick={closeModal}>Cancel</button>
+                  <button type="submit" className="btn-primary flex-1" disabled={captureLoading}>
+                    {captureLoading ? 'Creating...' : 'Continue to PayPal'}
+                  </button>
+                </div>
+              </form>
             )}
 
             {modal === 'withdraw' && (

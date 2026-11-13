@@ -7,6 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const { sequelize, connectDB } = require('./config/database');
+const { getEnvironmentReadiness } = require('./config/runtimeReadiness');
 const errorHandler = require('./middleware/errorHandler');
 const { requestId } = require('./middleware/requestId');
 const { apiLimiter } = require('./middleware/rateLimit');
@@ -35,29 +36,6 @@ if (process.env.SENTRY_DSN) {
 const app = express();
 app.disable('x-powered-by');
 
-const requiredEnv = () => {
-  const base = ['JWT_SECRET'];
-  const isProduction = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
-  const hasEmailProvider = Boolean(
-    process.env.RESEND_API_KEY || (process.env.EMAIL_USER && process.env.EMAIL_PASS)
-  );
-  if (!process.env.NEON_POSTGRES_URL && !process.env.DATABASE_URL) {
-    base.push('DATABASE_URL or NEON_POSTGRES_URL');
-  }
-  if (isProduction) {
-    if (!process.env.FRONTEND_URL) base.push('FRONTEND_URL');
-    if (!hasEmailProvider) base.push('RESEND_API_KEY or EMAIL_USER/EMAIL_PASS');
-    if (process.env.RESEND_API_KEY && !(process.env.FROM_EMAIL || process.env.EMAIL_FROM)) {
-      base.push('FROM_EMAIL or EMAIL_FROM');
-    }
-  }
-  return base;
-};
-const envCheck = () => {
-  const missing = requiredEnv().filter((k) => !process.env[k]);
-  return { ok: missing.length === 0, missing };
-};
-
 // Request ID + structured access logs
 app.use(requestId);
 morgan.token('id', (req) => req.id || '-');
@@ -83,6 +61,7 @@ app.use(
     credentials: true,
   })
 );
+app.use('/api/webhooks/resend', express.raw({ type: '*/*', limit: '1mb' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -110,7 +89,7 @@ app.get('/api/health', (req, res) => {
 
 // Readiness - DB connectivity + required env checks (for uptime monitors/deploy gates)
 app.get('/api/ready', async (req, res) => {
-  const env = envCheck();
+  const env = getEnvironmentReadiness();
   let db = { ok: false };
   try {
     await sequelize.authenticate({ logging: false });

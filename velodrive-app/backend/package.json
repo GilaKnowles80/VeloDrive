@@ -10,7 +10,7 @@
     "migrate": "node src/utils/migrate.js",
     "build": "echo 'Backend build complete'",
     "lint": "node --check src/server.js",
-    "test": "node --test test/upload-storage.test.js"
+    "test": "node --test test/upload-storage.test.js test/runtime-readiness.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1164.0",

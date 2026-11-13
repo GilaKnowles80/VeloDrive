@@ -24,11 +24,6 @@ const Checkout = () => {
     );
   }
 
-  const handlePayPalCheckout = () => {
-    // Route to PayPal payment gateway
-    window.location.href = `https://www.paypal.com/paypalme/your-paypal-account/${vehicle.pricePerDay}`;
-  };
-
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
       <button 
@@ -65,15 +60,15 @@ const Checkout = () => {
       <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-6 mb-8">
         <h4 className="font-bold text-slate-900 mb-2 text-sm">Escrow & Payment Terms</h4>
         <p className="text-xs text-slate-600 leading-relaxed">
-          Your payment will be held securely in escrow. Upon booking confirmation, a 10% service charge fee is applied on top of the owner's net amount. The owner receives the net amount and the service charge fee goes to the platform.
+          The booking amount and service charge are calculated by VeloDrive. PayPal checkout is created and captured by the VeloDrive server, and the payment is held in escrow until the rental is completed.
         </p>
       </div>
 
       <button
-        onClick={handlePayPalCheckout}
+        onClick={() => navigate(`/renter/dashboard?vehicleId=${encodeURIComponent(vehicle.id || vehicle.vehicleId)}`)}
         className="w-full py-4 bg-[#0070ba] hover:bg-[#005ea6] text-white font-extrabold rounded-2xl transition shadow-lg flex items-center justify-center gap-2 cursor-pointer text-base"
       >
-        Pay ₱{vehicle.pricePerDay} securely with PayPal
+        Continue to Secure PayPal Checkout
       </button>
     </div>
   );

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
-import { Car, Wallet, Calendar, Truck, MapPin, Upload, Image as ImageIcon, Trash2, Edit2, Save, Building2 } from 'lucide-react';
+import { Car, Wallet, Calendar, Truck, MapPin, Upload, Image as ImageIcon, Trash2, Edit2, Save, Building2, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import RichTextEditor from '../components/RichTextEditor';
 import GPSMap from '../components/GPSMap';
 
@@ -16,16 +16,32 @@ const assetUrl = (p) => {
 
 const MAX_IMAGES = 10;
 const emptyAd = () => ({ file: null, preview: '', description: '' });
+const getImageDimensions = (file) => new Promise((resolve, reject) => {
+  const image = new Image();
+  const objectUrl = URL.createObjectURL(file);
+  image.onload = () => {
+    URL.revokeObjectURL(objectUrl);
+    resolve({ width: image.naturalWidth, height: image.naturalHeight });
+  };
+  image.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    reject(new Error('The selected image could not be read.'));
+  };
+  image.src = objectUrl;
+});
 
 const OwnerDashboard = () => {
   const { user, updateUser } = useAuth();
   const [stats, setStats] = useState({ totalVehicles: 0, totalBookings: 0, totalEarnings: 0, pendingBookings: 0 });
   const [vehicles, setVehicles] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [ads, setAds] = useState([emptyAd()]);
+  const [activeAdIndex, setActiveAdIndex] = useState(0);
+  const [vehicleSlides, setVehicleSlides] = useState({});
   const [form, setForm] = useState({
     type: 'car', make: '', model: '', year: new Date().getFullYear(), color: '',
     licensePlate: '', vin: '', description: '', pricePerDay: '', adCampaignTitle: '',
@@ -50,6 +66,7 @@ const OwnerDashboard = () => {
       const v = vResp.data?.vehicles || [];
       const b = bResp.data?.bookings || [];
       setVehicles(v);
+      setBookings(b);
       setStats({
         totalVehicles: v.length,
         totalBookings: b.length,
@@ -72,6 +89,19 @@ const OwnerDashboard = () => {
     }
   };
 
+  const startRental = async (booking) => {
+    try {
+      const resp = await api.put(`/bookings/${booking.id}/start`);
+      if (resp.data?.success) {
+        const vehicleName = `${booking.vehicle?.make || 'Vehicle'} ${booking.vehicle?.model || ''}`.trim();
+        setMsg(`${vehicleName} is now En Route / Pulled Out for booking ${booking.bookingReference}.`);
+        await loadData();
+      }
+    } catch (e2) {
+      setErr(e2.response?.data?.message || 'Failed to start rental.');
+    }
+  };
+
   useEffect(() => { loadData(); }, []);
 
   // Sync company details from user
@@ -88,17 +118,29 @@ const OwnerDashboard = () => {
     }
   }, [user]);
 
-  const onImagePick = (idx, file) => {
+  const onImagePick = async (idx, file) => {
     setErr('');
     if (!file) return;
     if (!/^image\/(png|jpeg)$/.test(file.type)) {
       setErr('Only PNG or JPEG images are allowed.');
       return;
     }
+    let dimensions;
+    try {
+      dimensions = await getImageDimensions(file);
+    } catch (e) {
+      setErr(e.message);
+      return;
+    }
+    if (dimensions.width !== dimensions.height || ![1080, 1200].includes(dimensions.width)) {
+      setErr('Vehicle images must be square and sized 1080 × 1080 or 1200 × 1200 pixels.');
+      return;
+    }
     const next = [...ads];
     if (next[idx]?.preview) URL.revokeObjectURL(next[idx].preview);
     next[idx] = { ...next[idx], file, preview: URL.createObjectURL(file) };
     setAds(next);
+    setActiveAdIndex(idx);
   };
 
   const onDocumentPick = (key, file) => {
@@ -112,11 +154,16 @@ const OwnerDashboard = () => {
     setDocs((current) => ({ ...current, [key]: file }));
   };
 
-  const addSlot = () => { if (ads.length < MAX_IMAGES) setAds([...ads, emptyAd()]); };
+  const addSlot = () => {
+    if (ads.length >= MAX_IMAGES) return;
+    setActiveAdIndex(ads.length);
+    setAds([...ads, emptyAd()]);
+  };
   const removeSlot = (idx) => {
     const next = ads.filter((_, i) => i !== idx);
     if (ads[idx]?.preview) URL.revokeObjectURL(ads[idx].preview);
     setAds(next.length ? next : [emptyAd()]);
+    setActiveAdIndex((current) => Math.min(current > idx ? current - 1 : current, Math.max(next.length - 1, 0)));
   };
 
   const submitVehicleAd = async (e) => {
@@ -140,6 +187,7 @@ const OwnerDashboard = () => {
       setMsg('Vehicle ad submitted. It will appear after verification.');
       setForm({ type: 'car', make: '', model: '', year: new Date().getFullYear(), color: '', licensePlate: '', vin: '', description: '', pricePerDay: '', adCampaignTitle: '' });
       setAds([emptyAd()]);
+      setActiveAdIndex(0);
       setDocs({ or: null, proofOfOwnership: null, cr: null });
       loadData();
     } catch (e2) {
@@ -147,8 +195,7 @@ const OwnerDashboard = () => {
     } finally { setSaving(false); }
   };
 
-  const saveCompanyDetails = async (e) => {
-    e.preventDefault();
+  const saveCompanyDetails = async () => {
     setCompanySaving(true);
     try {
       const resp = await api.put('/users/profile', {
@@ -168,12 +215,25 @@ const OwnerDashboard = () => {
     } finally { setCompanySaving(false); }
   };
 
+  const cancelCompanyEdit = () => {
+    setCompanyForm({
+      companyName: user?.companyName || '',
+      companyAddress: user?.companyAddress || '',
+      contactNumber: user?.contactNumber || '',
+      contactPerson: user?.contactPerson || '',
+      email: user?.email || '',
+      position: user?.position || '',
+    });
+    setCompanyEdit(false);
+  };
+
   const renderVehicleImages = (v) => {
     let imgs = [];
     try { imgs = typeof v.adImages === 'string' ? JSON.parse(v.adImages) : (v.adImages || []); } catch { /* keep empty */ }
     if (!imgs.length && v.adCampaignImage) imgs = [v.adCampaignImage];
     return imgs;
   };
+  const activeAd = ads[activeAdIndex] || ads[0];
 
   return (
     <div className="page-shell">
@@ -209,157 +269,6 @@ const OwnerDashboard = () => {
           ))}
         </div>
 
-        {/* Company Details Section */}
-        <div className="card mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <Building2 className="w-5 h-5" /> Company Details
-              </h2>
-              <p className="text-sm text-gray-500">Your business information shown to renters alongside your vehicle listings.</p>
-            </div>
-            {!companyEdit && (
-              <button
-                onClick={() => setCompanyEdit(true)}
-                className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg font-medium hover:bg-blue-200 flex items-center gap-1"
-              >
-                <Edit2 className="w-3 h-3" /> Edit
-              </button>
-            )}
-          </div>
-
-          {companyEdit ? (
-            <form onSubmit={saveCompanyDetails} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="md:col-span-2 space-y-2">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Company Name</label>
-                    <input
-                      className="input-field"
-                      value={companyForm.companyName}
-                      onChange={(e) => setCompanyForm({ ...companyForm, companyName: e.target.value })}
-                      placeholder="e.g., Sample Vehicle Rentals"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Company Address</label>
-                    <input
-                      className="input-field"
-                      value={companyForm.companyAddress}
-                      onChange={(e) => setCompanyForm({ ...companyForm, companyAddress: e.target.value })}
-                      placeholder="e.g., 123 Main Street, Metro Manila, Philippines"
-                    />
-                  </div>
-                </div>
-                <div className="md:col-span-1 space-y-2">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Contact Person</label>
-                    <input
-                      className="input-field"
-                      value={companyForm.contactPerson}
-                      onChange={(e) => setCompanyForm({ ...companyForm, contactPerson: e.target.value })}
-                      placeholder="e.g., Virgilio Cain"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Contact Number</label>
-                    <input
-                      className="input-field"
-                      type="tel"
-                      value={companyForm.contactNumber}
-                      onChange={(e) => setCompanyForm({ ...companyForm, contactNumber: e.target.value })}
-                      placeholder="+63 9xx xxx xxxx"
-                    />
-                  </div>
-                </div>
-                <div className="md:col-span-1 space-y-2">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Position</label>
-                    <input
-                      className="input-field"
-                      value={companyForm.position}
-                      onChange={(e) => setCompanyForm({ ...companyForm, position: e.target.value })}
-                      placeholder="e.g., Owner / Manager"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Email Address</label>
-                    <input
-                      className="input-field"
-                      type="email"
-                      value={companyForm.email}
-                      readOnly
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={companySaving}
-                  className="btn-primary px-6 py-2 flex items-center gap-1"
-                >
-                  {companySaving ? <Save className="w-4 h-4" /> : null} {companySaving ? 'Saving…' : 'Save Changes'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (user) {
-                      setCompanyForm({
-                        companyName: user.companyName || '',
-                        companyAddress: user.companyAddress || '',
-                        contactNumber: user.contactNumber || '',
-                        contactPerson: user.contactPerson || '',
-                        email: user.email || '',
-                        position: user.position || '',
-                      });
-                    }
-                    setCompanyEdit(false);
-                  }}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                <div className="md:col-span-2 space-y-2">
-                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Name</p>
-                    <p className="text-gray-900 font-medium">{companyForm.companyName || '— Not set —'}</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Company Address</p>
-                    <p className="text-gray-900 font-medium">{companyForm.companyAddress || '— Not set —'}</p>
-                  </div>
-                </div>
-                <div className="md:col-span-1 space-y-2">
-                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Contact Person</p>
-                    <p className="text-gray-900 font-medium">{companyForm.contactPerson || '— Not set —'}</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Contact Number</p>
-                    <p className="text-gray-900 font-medium">{companyForm.contactNumber || '— Not set —'}</p>
-                  </div>
-                </div>
-                <div className="md:col-span-1 space-y-2">
-                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Position</p>
-                    <p className="text-gray-900 font-medium">{companyForm.position || '— Not set —'}</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Email Address</p>
-                    <p className="text-gray-900 font-medium">{companyForm.email || '— Not set —'}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="card mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900">Vehicle Ad Uploader</h2>
@@ -368,6 +277,7 @@ const OwnerDashboard = () => {
           {err && <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">{err}</div>}
           {msg && <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-700 text-sm">{msg}</div>}
           <form onSubmit={submitVehicleAd} noValidate className="space-y-5">
+            <p className="mb-1 text-sm text-gray-500">Each submission creates a separate vehicle ad, so you can list all 10 cars individually. Add up to 10 square JPEG or PNG photos (1080 × 1080 or 1200 × 1200 pixels) to each vehicle's carousel.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-700">Ad Title</label>
@@ -405,70 +315,6 @@ const OwnerDashboard = () => {
                 <label className="text-xs font-medium text-gray-700">VIN (optional)</label>
                 <input className="input-field" placeholder="VIN" value={form.vin} onChange={(e)=>setForm({...form, vin:e.target.value})} />
               </div>
-              <div className="md:col-span-3 space-y-1.5">
-                <label className="text-xs font-medium text-gray-700 block">Company Details</label>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="md:col-span-2 space-y-2">
-                    <input className="input-field" placeholder="Company Name" value={companyForm.companyName} onChange={(e)=>setCompanyForm({...companyForm, companyName:e.target.value})} />
-                    <input className="input-field" placeholder="Company Address" value={companyForm.companyAddress} onChange={(e)=>setCompanyForm({...companyForm, companyAddress:e.target.value})} />
-                  </div>
-                  <div className="md:col-span-1 space-y-2">
-                    <input className="input-field" placeholder="Contact Person" value={companyForm.contactPerson} onChange={(e)=>setCompanyForm({...companyForm, contactPerson:e.target.value})} />
-                    <input className="input-field" placeholder="Contact Number" value={companyForm.contactNumber} onChange={(e)=>setCompanyForm({...companyForm, contactNumber:e.target.value})} />
-                  </div>
-                  <div className="md:col-span-1 space-y-2">
-                    <input className="input-field" placeholder="Position" value={companyForm.position} onChange={(e)=>setCompanyForm({...companyForm, position:e.target.value})} />
-                    <input className="input-field" type="email" placeholder="Email Address" value={companyForm.email} readOnly />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-              <div className="space-y-1">
-                <label
-                  onClick={() => docOrRef.current?.click()}
-                  className={`block border rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors ${docs.or ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <p className="text-xs font-semibold text-gray-800">OR</p>
-                    <span className="text-xs text-gray-500">Certificate of Registration</span>
-                  </div>
-                  <svg className="w-5 h-5 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  <span className="text-xs text-gray-600">Upload PDF</span>
-                  <input ref={docOrRef} type="file" className="hidden" accept="application/pdf,.pdf" onChange={(e)=>onDocumentPick('or', e.target.files[0])} />
-                  {docs.or && <div className="mt-1 text-xs text-green-700 flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> {docs.or.name}</div>}
-                </label>
-              </div>
-              <div className="space-y-1">
-                <label
-                  onClick={() => docProofRef.current?.click()}
-                  className={`block border rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors ${docs.proofOfOwnership ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <p className="text-xs font-semibold text-gray-800">Proof of Ownership</p>
-                  </div>
-                  <svg className="w-5 h-5 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  <span className="text-xs text-gray-600">Upload PDF</span>
-                  <input ref={docProofRef} type="file" className="hidden" accept="application/pdf,.pdf" onChange={(e)=>onDocumentPick('proofOfOwnership', e.target.files[0])} />
-                  {docs.proofOfOwnership && <div className="mt-1 text-xs text-green-700 flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> {docs.proofOfOwnership.name}</div>}
-                </label>
-              </div>
-              <div className="space-y-1">
-                <label
-                  onClick={() => docCrRef.current?.click()}
-                  className={`block border rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors ${docs.cr ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <p className="text-xs font-semibold text-gray-800">CR</p>
-                    <span className="text-xs text-gray-500">Original Certificate</span>
-                  </div>
-                  <svg className="w-5 h-5 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  <span className="text-xs text-gray-600">Upload PDF</span>
-                  <input ref={docCrRef} type="file" className="hidden" accept="application/pdf,.pdf" onChange={(e)=>onDocumentPick('cr', e.target.files[0])} />
-                  {docs.cr && <div className="mt-1 text-xs text-green-700 flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> {docs.cr.name}</div>}
-                </label>
-              </div>
             </div>
 
             <div className="space-y-4">
@@ -477,7 +323,7 @@ const OwnerDashboard = () => {
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <p className="text-xs font-semibold text-gray-800">Ad Image {idx + 1}</p>
-                      <span className="text-xs text-gray-500">PNG/JPEG</span>
+                      <span className="text-xs text-gray-500">Square PNG/JPEG · 1080 or 1200 px</span>
                     </div>
                     <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 bg-gray-50 overflow-hidden">
                       {ad.preview ? <img src={ad.preview} alt={`Ad ${idx + 1}`} className="h-full w-full object-cover" /> : (
@@ -502,11 +348,104 @@ const OwnerDashboard = () => {
                 </div>
               ))}
             </div>
-            <div className="flex flex-wrap gap-3 pt-2">
-              <button type="button" onClick={addSlot} disabled={ads.length >= MAX_IMAGES} className="px-4 py-2 rounded-lg border border-gray-300 text-sm disabled:opacity-50"><Upload className="w-4 h-4 inline mr-1" />Add Image Slot ({ads.length}/{MAX_IMAGES})</button>
+            <section className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900">Feed Preview</h3>
+                  <p className="text-xs text-gray-500">Preview this vehicle’s photo carousel.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button type="button" aria-label="Previous preview image" onClick={() => setActiveAdIndex((activeAdIndex + ads.length - 1) % ads.length)} className="rounded-full border border-gray-300 bg-white p-2 disabled:opacity-40" disabled={ads.length < 2}><ChevronLeft className="h-4 w-4" /></button>
+                  <span className="text-xs text-gray-600">{activeAdIndex + 1} / {ads.length}</span>
+                  <button type="button" aria-label="Next preview image" onClick={() => setActiveAdIndex((activeAdIndex + 1) % ads.length)} className="rounded-full border border-gray-300 bg-white p-2 disabled:opacity-40" disabled={ads.length < 2}><ChevronRight className="h-4 w-4" /></button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="aspect-square overflow-hidden rounded-lg bg-white">
+                  {activeAd?.preview ? <img src={activeAd.preview} alt={`Feed preview ${activeAdIndex + 1}`} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-sm text-gray-400"><ImageIcon className="mr-2 h-5 w-5" />Select a vehicle image</div>}
+                </div>
+                <div className="rounded-lg bg-white p-4">
+                  <p className="font-semibold text-gray-900">{form.adCampaignTitle || `${form.make || 'Vehicle'} ${form.model}`}</p>
+                  <div className="mt-2 text-sm text-gray-700">{activeAd?.description?.replace(/<[^>]*>/g, '') || 'Your image description will appear here.'}</div>
+                </div>
+              </div>
+            </section>
+            <button type="button" onClick={addSlot} disabled={ads.length >= MAX_IMAGES} className="px-4 py-2 rounded-lg border border-gray-300 text-sm disabled:opacity-50"><Upload className="w-4 h-4 inline mr-1" />Add Image Slot ({ads.length}/{MAX_IMAGES})</button>
+            <section className="rounded-xl border border-gray-200 p-4">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="flex items-center gap-2 font-semibold text-gray-900"><Building2 className="h-5 w-5" /> Company Details</h3>
+                  <p className="text-sm text-gray-500">Shown to renters with your vehicle listings.</p>
+                </div>
+                {!companyEdit && <button type="button" onClick={() => setCompanyEdit(true)} className="inline-flex items-center gap-1 text-sm font-medium text-blue-700"><Edit2 className="h-4 w-4" />Edit</button>}
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="space-y-2">
+                  <input className="input-field" placeholder="Company Name" value={companyForm.companyName} disabled={!companyEdit} onChange={(e) => setCompanyForm({ ...companyForm, companyName: e.target.value })} />
+                  <input className="input-field" placeholder="Company Address" value={companyForm.companyAddress} disabled={!companyEdit} onChange={(e) => setCompanyForm({ ...companyForm, companyAddress: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <input className="input-field" placeholder="Contact Person" value={companyForm.contactPerson} disabled={!companyEdit} onChange={(e) => setCompanyForm({ ...companyForm, contactPerson: e.target.value })} />
+                  <input className="input-field" placeholder="Contact Number" value={companyForm.contactNumber} disabled={!companyEdit} onChange={(e) => setCompanyForm({ ...companyForm, contactNumber: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <input className="input-field" placeholder="Position" value={companyForm.position} disabled={!companyEdit} onChange={(e) => setCompanyForm({ ...companyForm, position: e.target.value })} />
+                  <input className="input-field" type="email" placeholder="Email Address" value={companyForm.email} readOnly />
+                </div>
+              </div>
+              {companyEdit && <div className="mt-3 flex gap-3">
+                <button type="button" onClick={saveCompanyDetails} disabled={companySaving} className="btn-primary inline-flex items-center gap-1 px-4 py-2">{companySaving ? <Save className="h-4 w-4" /> : null}{companySaving ? 'Saving…' : 'Save Company Details'}</button>
+                <button type="button" onClick={cancelCompanyEdit} className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600">Cancel</button>
+              </div>}
+            </section>
+            <section className="space-y-3">
+              <div>
+                <h3 className="font-semibold text-gray-900">Vehicle Documents (PDF)</h3>
+                <p className="text-xs text-gray-500">Required for verification. Documents are stored under the existing OR, CR, and proof-of-ownership fields.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+                {[
+                  { key: 'cr', title: 'Certificate (CR)', ref: docCrRef },
+                  { key: 'or', title: 'Receipt (OR)', ref: docOrRef },
+                  { key: 'proofOfOwnership', title: 'Proof of Ownership', ref: docProofRef },
+                ].map(({ key, title, ref }) => (
+                  <label key={key} onClick={() => ref.current?.click()} className={`block cursor-pointer rounded-lg border p-3 transition-colors hover:border-blue-400 hover:bg-blue-50 ${docs[key] ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}>
+                    <div className="mb-2 flex items-center gap-2"><FileText className="h-4 w-4 text-gray-500" /><p className="text-xs font-semibold text-gray-800">{title}</p></div>
+                    <span className="text-xs text-gray-600">Upload PDF</span>
+                    <input ref={ref} type="file" className="hidden" accept="application/pdf,.pdf" onChange={(e) => onDocumentPick(key, e.target.files[0])} />
+                    {docs[key] && <div className="mt-1 truncate text-xs text-green-700">{docs[key].name}</div>}
+                  </label>
+                ))}
+              </div>
+            </section>
+            <div className="flex justify-end pt-2">
               <button type="submit" disabled={saving} className="btn-primary px-6 py-2">{saving ? 'Submitting...' : 'Submit Vehicle Ad'}</button>
             </div>
           </form>
+        </div>
+
+        <div className="card mb-8">
+          <h2 className="mb-4 text-lg font-bold text-gray-900">Bookings & Vehicle Dispatch</h2>
+          {bookings.length === 0 ? <p className="text-sm text-gray-500">No bookings yet.</p> : (
+            <div className="space-y-3">
+              {bookings.map((booking) => (
+                <div key={booking.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-gray-900">{booking.vehicle?.make} {booking.vehicle?.model} {booking.vehicle?.year}</p>
+                    <p className="text-sm text-gray-600">Booking {booking.bookingReference} · {booking.rentalStartDate} to {booking.rentalEndDate}</p>
+                    <p className="mt-1 text-xs text-gray-500">Booking status: {booking.status} · Vehicle: {booking.vehicle?.status || 'active'}</p>
+                  </div>
+                  {booking.status === 'confirmed' && (
+                    <button type="button" onClick={() => startRental(booking)} className="btn-primary px-4 py-2 text-sm">Start Rental / Mark En Route</button>
+                  )}
+                  {booking.status === 'active' && booking.vehicle?.status === 'en-route' && (
+                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">Vehicle En Route / Pulled Out</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-3 text-xs text-gray-500">Starting a confirmed rental marks only its booked vehicle En Route and unavailable. Set a returned damaged vehicle to In Repair / Under Maintenance in its vehicle status control.</p>
         </div>
 
         <div className="card mb-8">
@@ -517,19 +456,25 @@ const OwnerDashboard = () => {
             <div className="space-y-4">
               {vehicles.map((v) => {
                 const imgs = renderVehicleImages(v);
+                const slideIndex = imgs.length ? (vehicleSlides[v.id] || 0) % imgs.length : 0;
+                const slide = imgs[slideIndex];
+                const imageSrc = typeof slide === 'string' ? slide : slide?.path || slide?.url;
                 return (
                   <div key={v.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-gray-200 rounded-xl bg-white">
-                    <div className="grid grid-cols-2 gap-2">
-                      {imgs.length ? imgs.slice(0, 10).map((img, i) => (
-                        <img key={i} src={assetUrl(typeof img === 'string' ? img : img.path || img.url)} alt={`${v.make} ${v.model} ${i + 1}`} className="w-full h-28 object-cover rounded-lg bg-gray-100" onError={(e)=>{e.currentTarget.style.display='none';}} />
-                      )) : <div className="col-span-2 h-28 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400"><Car className="w-8 h-8" /></div>}
+                    <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
+                      {imageSrc ? <img src={assetUrl(imageSrc)} alt={`${v.make} ${v.model} ${slideIndex + 1}`} className="h-full w-full object-cover" onError={(e)=>{e.currentTarget.style.display='none';}} /> : <div className="flex h-full items-center justify-center text-gray-400"><Car className="h-10 w-10" /></div>}
+                      {imgs.length > 1 && <>
+                        <button type="button" aria-label={`Previous ${v.make} ${v.model} image`} onClick={() => setVehicleSlides((current) => ({ ...current, [v.id]: (slideIndex + imgs.length - 1) % imgs.length }))} className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow"><ChevronLeft className="h-4 w-4" /></button>
+                        <button type="button" aria-label={`Next ${v.make} ${v.model} image`} onClick={() => setVehicleSlides((current) => ({ ...current, [v.id]: (slideIndex + 1) % imgs.length }))} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow"><ChevronRight className="h-4 w-4" /></button>
+                        <span className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white">{slideIndex + 1}/{imgs.length}</span>
+                      </>}
                     </div>
                     <div>
                       <div className="flex items-center justify-between gap-2">
                         <h3 className="font-bold text-gray-900">{v.adCampaignTitle || `${v.make} ${v.model} ${v.year}`}</h3>
                         <div className="flex items-center gap-2">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${v.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{v.isVerified ? 'Verified' : 'Pending'}</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${v.status === 'en-route' ? 'bg-blue-100 text-blue-700' : v.status === 'maintenance' ? 'bg-red-100 text-red-700' : v.status === 'inactive' ? 'bg-gray-100 text-gray-700' : v.status === 'suspended' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>{v.status === 'en-route' ? 'En Route' : v.status === 'maintenance' ? 'Maintenance' : v.status === 'inactive' ? 'Inactive' : v.status === 'suspended' ? 'Suspended' : 'Active'}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${v.status === 'en-route' ? 'bg-blue-100 text-blue-700' : v.status === 'maintenance' ? 'bg-red-100 text-red-700' : v.status === 'inactive' ? 'bg-gray-100 text-gray-700' : v.status === 'suspended' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>{v.status === 'en-route' ? 'En Route / Pulled Out' : v.status === 'maintenance' ? 'In Repair / Under Maintenance' : v.status === 'inactive' ? 'Inactive' : v.status === 'suspended' ? 'Suspended' : 'Active'}</span>
                         </div>
                       </div>
                       <p className="text-sm text-blue-700 font-semibold mt-1">Php {v.pricePerDay}/day</p>
@@ -544,14 +489,16 @@ const OwnerDashboard = () => {
                       </div>
                       <div className="mt-3 pt-3 border-t border-gray-100">
                         <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Vehicle Status</p>
+                        {v.status === 'en-route' && <p className="mb-2 text-xs text-blue-700">This vehicle is on an active rental and cannot be booked.</p>}
+                        {v.status === 'maintenance' && <p className="mb-2 text-xs text-red-700">This vehicle is in repair / under maintenance and unavailable to renters.</p>}
                         <select
                           value={v.status || 'active'}
                           onChange={(e) => updateVehicleStatus(v.id, e.target.value)}
                           className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
                         >
                           <option value="active">Active</option>
-                          <option value="en-route">En Route</option>
-                          <option value="maintenance">Maintenance (Damage/Broken)</option>
+                          <option value="en-route">En Route / Pulled Out</option>
+                          <option value="maintenance">In Repair / Under Maintenance</option>
                           <option value="inactive">Inactive</option>
                           <option value="suspended">Suspended</option>
                         </select>

@@ -1,5 +1,6 @@
 const { Wallet, Transaction, User } = require('../models');
-const { creditWallet, debitWallet, getOrCreateWallet } = require('../services/paymentService');
+const { sequelize } = require('../config/database');
+const { debitWallet, getOrCreateWallet } = require('../services/paymentService');
 const { createTopupOrder, capturePayPalPayment } = require('../services/paypalService');
 
 const MIN_AMOUNT = 1;
@@ -80,12 +81,20 @@ const captureTopup = async (req, res) => {
       return res.status(400).json({ success: false, message: 'PayPal order id is required' });
     }
 
-    // The reference is derived from the order id, so a repeat capture cannot credit twice.
     const reference = `TOPUP-${orderId}`;
-    const alreadyCredited = await Transaction.findOne({ where: { reference } });
-    if (alreadyCredited) {
+    const pendingTopup = await Transaction.findOne({
+      where: { reference, userId: req.user.id, type: 'wallet_topup' },
+    });
+    if (!pendingTopup) {
+      return res.status(404).json({ success: false, message: 'No wallet top-up was created for this PayPal order' });
+    }
+
+    if (pendingTopup.status === 'completed') {
       const wallet = await getOrCreateWallet(req.user.id);
-      return res.json({ success: true, alreadyProcessed: true, wallet, amount: Number(alreadyCredited.amount) });
+      return res.json({ success: true, alreadyProcessed: true, wallet, amount: Number(pendingTopup.amount) });
+    }
+    if (pendingTopup.status !== 'pending') {
+      return res.status(409).json({ success: false, message: 'This wallet top-up is not pending' });
     }
 
     const capture = await capturePayPalPayment(orderId);
@@ -93,23 +102,68 @@ const captureTopup = async (req, res) => {
       return res.status(502).json({ success: false, message: capture.error || 'PayPal capture failed' });
     }
 
-    const unit = capture.paypalResponse?.purchase_units?.[0];
     const expectedRef = `wallet_${req.user.id}`;
-    if (unit?.reference_id && unit.reference_id !== expectedRef) {
+    if (capture.referenceId !== expectedRef) {
       return res.status(403).json({ success: false, message: 'This PayPal order does not belong to your wallet' });
     }
 
     const amount = Number(capture.amount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(502).json({ success: false, message: 'PayPal returned an invalid captured amount' });
+    const expectedAmount = Number(pendingTopup.amount);
+    if (
+      capture.status !== 'COMPLETED' ||
+      !Number.isFinite(amount) ||
+      amount <= 0 ||
+      amount.toFixed(2) !== expectedAmount.toFixed(2) ||
+      capture.currency !== pendingTopup.currency ||
+      Number(capture.orderAmount).toFixed(2) !== expectedAmount.toFixed(2) ||
+      capture.orderCurrency !== pendingTopup.currency
+    ) {
+      return res.status(502).json({ success: false, message: 'PayPal capture details do not match the pending top-up' });
     }
 
-    const result = await creditWallet(req.user.id, amount, 'wallet_topup', 'Wallet top-up via PayPal', {
-      reference,
-      metadata: { paypalOrderId: orderId, paypalTransactionId: capture.transactionId },
+    const result = await sequelize.transaction(async (transaction) => {
+      const currentTopup = await Transaction.findOne({
+        where: { reference, userId: req.user.id, type: 'wallet_topup' },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!currentTopup) throw new Error('Wallet top-up was not found');
+      if (currentTopup.status === 'completed') {
+        const wallet = await getOrCreateWallet(req.user.id, transaction);
+        return { wallet, amount: Number(currentTopup.amount), alreadyProcessed: true };
+      }
+      if (currentTopup.status !== 'pending') {
+        throw new Error('This wallet top-up is no longer pending');
+      }
+
+      let wallet = await Wallet.findOne({
+        where: { userId: req.user.id },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!wallet) wallet = await Wallet.create({ userId: req.user.id, balance: 0 }, { transaction });
+      wallet.balance = Number((Number(wallet.balance) + amount).toFixed(2));
+      await wallet.save({ transaction });
+
+      currentTopup.status = 'completed';
+      currentTopup.metadata = {
+        ...(currentTopup.metadata || {}),
+        paypalOrderId: orderId,
+        paypalTransactionId: capture.transactionId,
+        provider: 'paypal',
+        capturedAt: new Date().toISOString(),
+      };
+      await currentTopup.save({ transaction });
+      return { wallet, amount, alreadyProcessed: false };
     });
 
-    res.json({ success: true, message: 'Wallet topped up', wallet: result.wallet, amount });
+    res.json({
+      success: true,
+      alreadyProcessed: result.alreadyProcessed,
+      message: 'Wallet topped up',
+      wallet: result.wallet,
+      amount: result.amount,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

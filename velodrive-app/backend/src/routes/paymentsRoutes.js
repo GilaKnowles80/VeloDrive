@@ -2,15 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 const {
-  createPaymentHandler,
-  capturePaymentHandler,
   savePaymentAccountHandler,
   getPaymentAccountHandler,
 } = require('../controllers/paymentsController');
 
-// Unified payment gateway
-router.post('/create', protect, createPaymentHandler);
-router.post('/capture', protect, capturePaymentHandler);
+const retiredWalletPayment = (_req, res) => res.status(410).json({
+  success: false,
+  message: 'This payment flow is no longer available. Use the PayPal wallet top-up flow.',
+});
+
+router.post('/create', protect, retiredWalletPayment);
+router.post('/capture', protect, retiredWalletPayment);
 
 // User payment account (bank / GCash / PayPal preference)
 router.post('/account', protect, savePaymentAccountHandler);

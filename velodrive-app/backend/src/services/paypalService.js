@@ -1,20 +1,24 @@
 ﻿const paypal = require('@paypal/checkout-server-sdk');
 const { Booking, Transaction, User, Vehicle } = require('../models');
 const { withTimeout, retry, CircuitBreaker } = require('../utils/resilience');
+const { assertPayPalRuntimeAllowed } = require('../config/runtimeReadiness');
 
 const paypalCircuit = new CircuitBreaker({ name: 'paypal', failureThreshold: 4, resetMs: 60000 });
 const PAYPAL_TIMEOUT_MS = Number(process.env.PAYPAL_TIMEOUT_MS || 20000);
 
 const execPayPal = (request) =>
-  paypalCircuit.exec(() => retry(
-    () => withTimeout(paypalClient.execute(request), PAYPAL_TIMEOUT_MS, 'paypal'),
-    {
-      retries: 2,
-      baseDelayMs: 500,
-      shouldRetry: (err) => err?.code !== 'CIRCUIT_OPEN' && !/invalid|unauthorized|malformed/i.test(err?.message || ''),
-      onRetry: (err, attempt) => console.warn(JSON.stringify({ level: 'warn', msg: 'paypal_retry', attempt, error: err.message })),
-    }
-  ));
+  Promise.resolve().then(() => {
+    assertPayPalRuntimeAllowed();
+    return paypalCircuit.exec(() => retry(
+      () => withTimeout(paypalClient.execute(request), PAYPAL_TIMEOUT_MS, 'paypal'),
+      {
+        retries: 2,
+        baseDelayMs: 500,
+        shouldRetry: (err) => err?.code !== 'CIRCUIT_OPEN' && !/invalid|unauthorized|malformed/i.test(err?.message || ''),
+        onRetry: (err, attempt) => console.warn(JSON.stringify({ level: 'warn', msg: 'paypal_retry', attempt, error: err.message })),
+      }
+    ));
+  });
 
 /**
  * PayPal Environment Configuration
@@ -31,14 +35,12 @@ const paypalClient = new paypal.core.PayPalHttpClient(
 );
 
 /**
- * Build a PayPal payment request object for booking escrow split
- * Renter pays total → Admin takes 10% service charge fee → Owner receives net amount
- * Owner's PayPal email is the payee; admin service charge goes to PAYPAL_ADMIN_EMAIL via platform_fees
- * platform_fees is omitted when serviceChargeFee is 0 (e.g., owner membership paid directly to admin),
- * because the live PayPal account is not enabled for platform_fees.
+ * Build a booking payment request that pays the owner directly and routes the
+ * service fee to the platform. This does not hold funds in escrow.
  */
 const buildMultiPartyPaymentRequest = ({
   bookingId,
+  referenceId,
   ownerId,
   salesAgentId,
   basePrice,
@@ -51,9 +53,13 @@ const buildMultiPartyPaymentRequest = ({
 }) => {
   const serviceChargeAmount = parseFloat(serviceChargeFee.toFixed(2));
   const ownerNetAmount = parseFloat(basePrice.toFixed(2));
+  if (serviceChargeAmount > 0 && process.env.PAYPAL_PLATFORM_FEES_ENABLED !== 'true') {
+    throw new Error('PayPal platform fees are not enabled; confirm marketplace approval before creating booking orders');
+  }
 
   const purchaseUnit = {
-    reference_id: `booking_${bookingId}`,
+    reference_id: referenceId || `booking_${bookingId}`,
+    custom_id: referenceId || `booking_${bookingId}`,
     amount: {
       currency_code: currency,
       value: totalAmount.toFixed(2),
@@ -79,9 +85,7 @@ const buildMultiPartyPaymentRequest = ({
     }
   };
 
-  // Only include platform_fees when there is an actual service charge split.
-  // The live PayPal account is not enabled for platform_fees, so omit it for
-  // direct payments (e.g., owner membership paid directly to admin).
+  // Direct-to-platform orders, such as membership, do not use platform_fees.
   if (serviceChargeAmount > 0) {
     purchaseUnit.payment_instruction = {
       platform_fees: [
@@ -160,16 +164,39 @@ const capturePayPalPayment = async (orderId) => {
     const request = new paypal.orders.OrdersCaptureRequest(orderId);
     const response = await execPayPal(request);
 
-    const capture = response.result.purchase_units[0].payments.captures[0];
+    const unit = response.result.purchase_units?.[0];
+    const capture = unit?.payments?.captures?.find((item) => item.status === 'COMPLETED')
+      || unit?.payments?.captures?.[0];
+    if (!capture) throw new Error('PayPal order did not return a capture');
     return {
       success: true,
       transactionId: capture.id,
       status: capture.status,
       amount: parseFloat(capture.amount.value),
       currency: capture.amount.currency_code,
+      referenceId: unit.reference_id,
+      orderAmount: parseFloat(unit.amount.value),
+      orderCurrency: unit.amount.currency_code,
       paypalResponse: response.result
     };
   } catch (error) {
+    if (/ALREADY_CAPTURED|ORDER_ALREADY_CAPTURED/i.test(error?.message || '')) {
+      const existing = await getOrder(orderId);
+      const capture = existing.order?.capture;
+      if (existing.success && existing.order.status === 'COMPLETED' && capture?.status === 'COMPLETED') {
+        return {
+          success: true,
+          alreadyCaptured: true,
+          transactionId: capture.id,
+          status: capture.status,
+          amount: Number(capture.amount),
+          currency: capture.currency,
+          referenceId: existing.order.referenceId,
+          orderAmount: Number(existing.order.amount),
+          orderCurrency: existing.order.currency,
+        };
+      }
+    }
     console.error(JSON.stringify({ level: 'error', msg: 'paypal_capture_error', error: error.message, circuit: paypalCircuit.snapshot() }));
     return { success: false, error: error.message };
   }
@@ -262,21 +289,26 @@ const processSplitPayment = async ({
  * Process Owner Membership (monthly Php 499 or yearly Php 4,999) â†’ Admin
  * Charged when owner subscribes. Payee = admin PayPal (gctravelandtours2021@gmail.com).
  */
-const processOwnerMembership = async ({ ownerId, amount = 4999, currency = 'PHP', billingCycle = 'yearly' }) => {
+const processOwnerMembership = async ({ ownerId, billingCycle = 'yearly' }) => {
   const transaction = await Booking.sequelize.transaction();
   try {
     const owner = await User.findByPk(ownerId, { transaction });
     if (!owner) throw new Error('Owner not found');
     if (owner.role !== 'owner') throw new Error('User is not an owner');
 
+    const plans = { monthly: 499, yearly: 4999 };
+    const amount = plans[billingCycle];
+    if (!amount) throw new Error('Invalid membership billing cycle');
+
     const membershipResponse = await createPayPalOrder({
       bookingId: `membership_${ownerId}`,
+      referenceId: `membership_${ownerId}`,
       ownerId,
       salesAgentId: null,
       basePrice: amount,
       serviceChargeFee: 0,
       totalAmount: amount,
-      currency,
+      currency: 'PHP',
       returnUrl: `${process.env.FRONTEND_URL}/owner/membership?success=1&plan=${billingCycle}`,
       cancelUrl: `${process.env.FRONTEND_URL}/owner/membership?cancelled=1`,
       ownerPaypalEmail: process.env.PAYPAL_ADMIN_EMAIL,
@@ -291,7 +323,7 @@ const processOwnerMembership = async ({ ownerId, amount = 4999, currency = 'PHP'
       type: 'membership',
       userId: ownerId,
       amount,
-      currency,
+      currency: 'PHP',
       status: 'pending',
       description: `VeloDrive membership fee (Php ${amount}) — ${billingCycle}`,
       metadata: {
@@ -310,7 +342,7 @@ const processOwnerMembership = async ({ ownerId, amount = 4999, currency = 'PHP'
       orderId: membershipResponse.orderId,
       approvalUrl: membershipResponse.approvalUrl,
       amount,
-      currency,
+      currency: 'PHP',
       billingCycle,
       recipient: process.env.PAYPAL_ADMIN_EMAIL
     };
@@ -363,6 +395,7 @@ const createTopupOrder = async ({ userId, amount, currency = 'PHP', returnUrl, c
       purchase_units: [
         {
           reference_id: `wallet_${userId}`,
+          custom_id: `wallet_${userId}`,
           description: 'VeloDrive wallet top-up',
           amount: {
             currency_code: currency,
@@ -391,6 +424,20 @@ const createTopupOrder = async ({ userId, amount, currency = 'PHP', returnUrl, c
     });
 
     const response = await execPayPal(request);
+    await Transaction.create({
+      reference: `TOPUP-${response.result.id}`,
+      type: 'wallet_topup',
+      userId,
+      amount: value,
+      currency,
+      status: 'pending',
+      description: `Wallet top-up via PayPal (Php ${value.toFixed(2)})`,
+      metadata: {
+        paypalOrderId: response.result.id,
+        provider: 'paypal',
+        paymentMethod: 'paypal',
+      },
+    });
     return {
       success: true,
       orderId: response.result.id,
@@ -413,6 +460,8 @@ const getOrder = async (orderId) => {
     const request = new paypal.orders.OrdersGetRequest(orderId);
     const response = await execPayPal(request);
     const unit = response.result.purchase_units?.[0];
+    const capture = unit?.payments?.captures?.find((item) => item.status === 'COMPLETED')
+      || unit?.payments?.captures?.[0];
 
     return {
       success: true,
@@ -422,6 +471,13 @@ const getOrder = async (orderId) => {
         amount: unit?.amount?.value,
         currency: unit?.amount?.currency_code,
         referenceId: unit?.reference_id,
+        customId: unit?.custom_id,
+        capture: capture ? {
+          id: capture.id,
+          status: capture.status,
+          amount: capture.amount?.value,
+          currency: capture.amount?.currency_code,
+        } : null,
       },
     };
   } catch (error) {
@@ -430,12 +486,71 @@ const getOrder = async (orderId) => {
   }
 };
 
+const verifyPayPalWebhook = async (headers, event) => {
+  assertPayPalRuntimeAllowed();
+  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+  const clientId = process.env.PAYPAL_CLIENT_ID;
+  const secret = process.env.PAYPAL_SECRET_KEY;
+  if (!webhookId || !clientId || !secret) {
+    throw new Error('PayPal webhook verification is not configured');
+  }
+
+  const headerNames = {
+    auth_algo: 'paypal-auth-algo',
+    cert_url: 'paypal-cert-url',
+    transmission_id: 'paypal-transmission-id',
+    transmission_sig: 'paypal-transmission-sig',
+    transmission_time: 'paypal-transmission-time',
+  };
+  const verification = { webhook_id: webhookId, webhook_event: event };
+  for (const [field, headerName] of Object.entries(headerNames)) {
+    const value = headers[headerName];
+    if (!value) throw new Error(`Missing PayPal webhook header: ${headerName}`);
+    verification[field] = value;
+  }
+
+  const apiBase = process.env.PAYPAL_MODE === 'live'
+    ? 'https://api-m.paypal.com'
+    : 'https://api-m.sandbox.paypal.com';
+  const signal = AbortSignal.timeout(PAYPAL_TIMEOUT_MS);
+  const tokenResponse = await fetch(`${apiBase}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${clientId}:${secret}`).toString('base64')}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+    signal,
+  });
+  if (!tokenResponse.ok) {
+    throw new Error(`PayPal OAuth request failed with status ${tokenResponse.status}`);
+  }
+  const tokenData = await tokenResponse.json();
+  if (!tokenData.access_token) throw new Error('PayPal OAuth response did not include an access token');
+
+  const verifyResponse = await fetch(`${apiBase}/v1/notifications/verify-webhook-signature`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tokenData.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(verification),
+    signal: AbortSignal.timeout(PAYPAL_TIMEOUT_MS),
+  });
+  if (!verifyResponse.ok) {
+    throw new Error(`PayPal webhook verification failed with status ${verifyResponse.status}`);
+  }
+  const verifyData = await verifyResponse.json();
+  return verifyData.verification_status === 'SUCCESS';
+};
+
 module.exports = {
   buildMultiPartyPaymentRequest,
   createPayPalOrder,
   capturePayPalPayment,
   createTopupOrder,
   getOrder,
+  verifyPayPalWebhook,
   processSplitPayment,
   processOwnerMembership,
   refundPayment

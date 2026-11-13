@@ -145,6 +145,16 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
+  paypalMerchantId: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'PayPal merchant ID from partner referral onboarding'
+  },
+  paypalTrackingId: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'PayPal partner referral tracking ID for merchant ID lookup'
+  },
   resetPasswordToken: {
     type: DataTypes.STRING(255),
     allowNull: true
