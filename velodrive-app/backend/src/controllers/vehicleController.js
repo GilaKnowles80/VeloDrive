@@ -1,6 +1,8 @@
 const { Vehicle, GPSLocation, User } = require('../models');
+const { fileToStorageValue, serializeVehicle } = require('../services/uploadStorage');
 
 const OWNER_ATTRS = ['id', 'firstName', 'lastName', 'email', 'phone', 'address', 'companyName', 'companyAddress', 'contactNumber', 'contactPerson'];
+const PRIVATE_VEHICLE_FILE_FIELDS = ['or', 'proofOfOwnership', 'cr'];
 
 const VEHICLE_TYPES = [
   'motorcycle', 'car', 'van', 'suv', 'sedan', 'coupe', 'hatchback', 'pickup',
@@ -27,15 +29,7 @@ const pick = (source, keys) =>
     return acc;
   }, {});
 
-// Convert a multer memory-storage file to a base64 data URL (works on Vercel read-only FS)
-const fileToDataUrl = (file) => {
-  if (!file) return null;
-  const mime = file.mimetype || 'application/octet-stream';
-  const base64 = file.buffer.toString('base64');
-  return `data:${mime};base64,${base64}`;
-};
-
-const firstFile = (files, field) => fileToDataUrl(files?.[field]?.[0]);
+const firstFile = (files, field) => fileToStorageValue(files?.[field]?.[0]);
 
 const normalizeType = (raw) => {
   if (!raw) return null;
@@ -66,7 +60,7 @@ const createVehicle = async (req, res) => {
     }
 
     const adImages = (req.files?.adImages || []).slice(0, 10)
-      .map((file) => fileToDataUrl(file))
+      .map((file) => fileToStorageValue(file))
       .filter(Boolean);
 
     let specifications = null;
@@ -117,7 +111,11 @@ const createVehicle = async (req, res) => {
       status: 'active',
     });
 
-    res.status(201).json({ success: true, message: 'Vehicle submitted for verification', vehicle });
+    res.status(201).json({
+      success: true,
+      message: 'Vehicle submitted for verification',
+      vehicle: await serializeVehicle(vehicle, { includePrivate: true }),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -129,7 +127,10 @@ const getOwnerVehicles = async (req, res) => {
       where: { ownerId: req.user.id },
       order: [['createdAt', 'DESC']],
     });
-    res.json({ success: true, vehicles });
+    res.json({
+      success: true,
+      vehicles: await Promise.all(vehicles.map((vehicle) => serializeVehicle(vehicle, { includePrivate: true }))),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -158,12 +159,17 @@ const getAllVehicles = async (req, res) => {
 
     const vehicles = await Vehicle.findAll({
       where,
+      attributes: { exclude: PRIVATE_VEHICLE_FILE_FIELDS },
       include: [{ model: User, as: 'owner', attributes: OWNER_ATTRS }],
       order: [['createdAt', 'DESC']],
       limit: 200,
     });
 
-    res.json({ success: true, count: vehicles.length, vehicles });
+    res.json({
+      success: true,
+      count: vehicles.length,
+      vehicles: await Promise.all(vehicles.map((vehicle) => serializeVehicle(vehicle))),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -182,7 +188,10 @@ const getVehicleById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Vehicle not found' });
     }
 
-    res.json({ success: true, vehicle });
+    res.json({
+      success: true,
+      vehicle: await serializeVehicle(vehicle, { includePrivate: isOwner || isAdmin }),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -214,7 +223,11 @@ const updateVehicle = async (req, res) => {
     }
 
     await vehicle.update(updates);
-    res.json({ success: true, message: 'Vehicle updated', vehicle });
+    res.json({
+      success: true,
+      message: 'Vehicle updated',
+      vehicle: await serializeVehicle(vehicle, { includePrivate: true }),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -325,7 +338,11 @@ const updateVehicleStatus = async (req, res) => {
     vehicle.isAvailable = isAvailable;
     await vehicle.save();
 
-    res.json({ success: true, vehicle, message: `Vehicle status updated to ${status}` });
+    res.json({
+      success: true,
+      vehicle: await serializeVehicle(vehicle, { includePrivate: true }),
+      message: `Vehicle status updated to ${status}`,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

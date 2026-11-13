@@ -1,14 +1,7 @@
 const { User, Document } = require('../models');
 const { getOrCreateWallet } = require('../services/paymentService');
 const { exportUserData, eraseUserData, withdrawConsent } = require('../services/gdprService');
-
-// Convert a multer memory-storage file to a base64 data URL (works on Vercel read-only FS)
-const fileToDataUrl = (file) => {
-  if (!file) return null;
-  const mime = file.mimetype || 'application/octet-stream';
-  const base64 = file.buffer.toString('base64');
-  return `data:${mime};base64,${base64}`;
-};
+const { fileToStorageValue, serializeDocument } = require('../services/uploadStorage');
 
 const DOCUMENT_TYPES = [
   'certificate_of_registration', 'proof_of_ownership', 'original_certificate',
@@ -93,12 +86,16 @@ const uploadDocument = async (req, res) => {
       vehicleId,
       type,
       fileName: req.file.originalname || req.file.filename,
-      filePath: fileToDataUrl(req.file),
+      filePath: fileToStorageValue(req.file),
       fileSize: req.file.size,
       mimeType: req.file.mimetype,
     });
 
-    res.status(201).json({ success: true, message: 'Document uploaded', document });
+    res.status(201).json({
+      success: true,
+      message: 'Document uploaded',
+      document: await serializeDocument(document),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

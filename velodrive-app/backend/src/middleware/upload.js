@@ -3,22 +3,9 @@
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { randomUUID } = require('crypto');
 const multerS3 = require('multer-s3');
-
-// Check if S3 is configured (for production/Vercel)
-const useS3 = process.env.S3_BUCKET_NAME && process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY;
-
-let s3Client = null;
-if (useS3) {
-  s3Client = new S3Client({
-    region: process.env.S3_REGION || 'us-east-1',
-    credentials: {
-      accessKeyId: process.env.S3_ACCESS_KEY_ID,
-      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-    },
-  });
-}
+const { s3Client, useS3 } = require('../services/uploadStorage');
 
 const ensureDir = (dir) => {
   try {
@@ -43,10 +30,10 @@ const storage = useS3
       bucket: process.env.S3_BUCKET_NAME,
       contentType: multerS3.AUTO_CONTENT_TYPE,
       key: (req, file, cb) => {
-        const folder = req.body.folder || 'documents';
+        const privateFileFields = ['or', 'proofOfOwnership', 'cr', 'file'];
+        const folder = privateFileFields.includes(file.fieldname) ? 'private' : 'media';
         const ext = path.extname(file.originalname);
-        const filename = `${folder}/${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-        cb(null, filename);
+        cb(null, `${folder}/${req.user.id}/${randomUUID()}${ext}`);
       },
     })
   : multer.memoryStorage();

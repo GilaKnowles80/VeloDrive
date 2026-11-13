@@ -10,10 +10,11 @@
     "migrate": "node src/utils/migrate.js",
     "build": "echo 'Backend build complete'",
     "lint": "node --check src/server.js",
-    "test": "echo \"No backend tests configured\" && exit 0"
+    "test": "node --test test/upload-storage.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1164.0",
+    "@aws-sdk/s3-request-presigner": "^3.1168.0",
     "@neondatabase/serverless": "^1.2.0",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "bcryptjs": "^2.4.3",
