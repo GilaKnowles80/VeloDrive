@@ -1,7 +1,6 @@
 const CACHE_NAME = 'velodrive-v2';
 const STATIC_ASSETS = [
   '/manifest.json',
-  '/logo.svg',
   '/logo.jpg',
   '/paypal-logo.png',
 ];
