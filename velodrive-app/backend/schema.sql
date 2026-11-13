@@ -76,22 +76,6 @@ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'paypal_merchant_id'
-  ) THEN
-    ALTER TABLE public.users ADD COLUMN paypal_merchant_id varchar(255);
-  END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'paypal_tracking_id'
-  ) THEN
-    ALTER TABLE public.users ADD COLUMN paypal_tracking_id varchar(255);
-  END IF;
-END $$;
-
 CREATE TABLE IF NOT EXISTS public.bookings (
   id uuid NOT NULL PRIMARY KEY,
   "bookingReference" varchar(50) NOT NULL UNIQUE,
