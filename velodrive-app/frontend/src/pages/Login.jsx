@@ -16,7 +16,7 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [otp, setOtp] = useState('');
   const [needsVerify, setNeedsVerify] = useState(false);
-  const [isAdminOtp, setIsAdminOtp] = useState(false);
+  const [isLoginOtp, setIsLoginOtp] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,7 +51,7 @@ const Login = () => {
       });
       const { user, tokens, otpRequired } = response.data;
       if (otpRequired) {
-        setIsAdminOtp(true);
+        setIsLoginOtp(true);
         setNeedsVerify(true);
         setOtpExpiresIn(OTP_EXPIRES_SEC);
         setMessage(response.data?.message || 'An OTP code has been sent to your email.');
@@ -68,6 +68,11 @@ const Login = () => {
         : (status === 404 || !err.response) ? 'Service unavailable. Please try again in a moment (backend API not reachable).'
         : 'Login failed';
       setError(msg);
+      if (data?.otpRequired) {
+        setIsLoginOtp(true);
+        setNeedsVerify(true);
+        setOtpExpiresIn(OTP_EXPIRES_SEC);
+      }
       if (/verify|otp|verification/i.test(String(msg))) {
         setNeedsVerify(true);
         if (otpExpiresIn <= 0) setOtpExpiresIn(OTP_EXPIRES_SEC);
@@ -97,7 +102,7 @@ const Login = () => {
       }
       setMessage('Email verified. Please sign in.');
       setNeedsVerify(false);
-      setIsAdminOtp(false);
+      setIsLoginOtp(false);
     } catch (err) {
       setError(err.response?.data?.message || 'OTP verification failed');
     } finally {
@@ -105,7 +110,7 @@ const Login = () => {
     }
   };
 
-  const handleVerifyAdminOtp = async (e) => {
+  const handleVerifyLoginOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -118,9 +123,10 @@ const Login = () => {
       const { user, tokens } = res.data;
       login(user, tokens.accessToken, tokens.refreshToken);
       if (user?.role === 'admin') navigate('/admin/dashboard');
+      else if (user?.role === 'owner') navigate('/owner/dashboard');
       else navigate('/renter/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Admin OTP verification failed');
+      setError(err.response?.data?.message || 'Sign-in OTP verification failed');
     } finally {
       setLoading(false);
     }
@@ -222,9 +228,9 @@ const Login = () => {
         </form>
 
         {needsVerify && (
-          <form onSubmit={isAdminOtp ? handleVerifyAdminOtp : handleVerifyOtp} className="mt-4 space-y-3 border-t border-gray-200 pt-4">
+          <form onSubmit={isLoginOtp ? handleVerifyLoginOtp : handleVerifyOtp} className="mt-4 space-y-3 border-t border-gray-200 pt-4">
             <p className="text-sm text-gray-700 font-medium">
-              {isAdminOtp ? 'Admin Two-Step Verification' : 'Verify your email to continue'}
+              {isLoginOtp ? 'Two-Step Sign-In Verification' : 'Verify your email to continue'}
             </p>
             <div className="rounded-lg bg-sky-50 border border-sky-100 px-3 py-2 text-xs text-sky-800 space-y-1">
               <div className="flex items-center gap-2">
@@ -252,7 +258,7 @@ const Login = () => {
               </div>
             </div>
             <button type="submit" className="btn-primary w-full disabled:opacity-50" disabled={loading || otp.length < 6}>
-              {loading ? 'Verifying...' : isAdminOtp ? 'Complete Admin Login' : 'Verify Email'}
+              {loading ? 'Verifying...' : isLoginOtp ? 'Complete Sign In' : 'Verify Email'}
             </button>
             <button type="button" onClick={handleResendOtp} disabled={resending || retryAfter > 0} className="w-full text-sm text-blue-600 font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
               {resending ? 'Sending...' : retryAfter > 0 ? `Send available in ${formatCountdown(retryAfter)}` : 'Send code'}

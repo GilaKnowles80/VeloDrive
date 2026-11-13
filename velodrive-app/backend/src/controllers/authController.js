@@ -268,8 +268,8 @@ const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Admin login requires OTP verification (two-step: password -> OTP -> tokens) unless OTP_BYPASS is true
-    if (user.role === 'admin' && !OTP_BYPASS) {
+    // Login requires email OTP for every account unless OTP_BYPASS is explicitly enabled.
+    if (!OTP_BYPASS) {
       const now = new Date();
       const quota = consumeOtpSendQuota(user, now);
       if (!quota.ok) {
@@ -288,6 +288,7 @@ const login = async (req, res) => {
       if (!emailResult || emailResult.success === false) {
         return res.status(502).json({
           success: false,
+          otpRequired: true,
           message: 'Could not send OTP email. Check email configuration.',
           emailError: process.env.NODE_ENV === 'production' ? undefined : emailResult?.error,
         });
@@ -300,7 +301,7 @@ const login = async (req, res) => {
       return res.json({
         success: true,
         otpRequired: true,
-        message: 'Password correct. An OTP code has been sent to your email. Please enter it to complete admin login.',
+        message: 'Password correct. An OTP code has been sent to your email. Enter it to complete login.',
         user: userResponse,
       });
     }
@@ -343,8 +344,12 @@ const loginVerifyOTP = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    if (user.role !== 'admin') {
-      return res.status(400).json({ success: false, message: 'OTP login verification is only available for admin accounts.' });
+    if (user.dataDeletedAt || !user.isActive) {
+      return res.status(403).json({ success: false, message: 'This account cannot sign in.' });
+    }
+
+    if (!user.isEmailVerified) {
+      return res.status(403).json({ success: false, message: 'Verify your email address before signing in.' });
     }
 
     if (!user.otpCode || String(user.otpCode).trim() !== otp || !user.otpExpires || new Date() > new Date(user.otpExpires)) {
@@ -372,7 +377,7 @@ const loginVerifyOTP = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Admin login successful',
+      message: 'Login successful',
       user: userResponse,
       tokens
     });
@@ -426,7 +431,10 @@ const resendOTP = async (req, res) => {
     const user = await User.findOne({ where: { email } });
     // Avoid leaking whether the email exists
     if (!user) return res.json({ success: true, message: 'If the account exists and is unverified, a new code was sent.' });
-    if (user.isEmailVerified) return res.status(400).json({ success: false, message: 'Account is already verified. Please log in.' });
+    // Verified accounts may resend an OTP while completing the login challenge.
+    if (user.isEmailVerified && !user.otpCode) {
+      return res.json({ success: true, message: 'If a login code is pending, a new code was sent.' });
+    }
 
     const now = new Date();
     const quota = consumeOtpSendQuota(user, now);
