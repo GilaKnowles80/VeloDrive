@@ -6,7 +6,7 @@
   "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://velo-drive-green.vercel.app/api/$1" },
+    { "source": "/api/(.*)", "destination": "https://api.gctravelandtour.com/api/$1" },
     { "source": "/assets/:path*", "destination": "/assets/:path*" },
     { "source": "/manifest.json", "destination": "/manifest.json" },
     { "source": "/sw.js", "destination": "/sw.js" },
