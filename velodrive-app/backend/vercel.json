@@ -1,18 +1,16 @@
+
 {
   "version": 2,
   "builds": [
     {
       "src": "src/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["node_modules/pg/**", "node_modules/pg-hstore/**"]
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [
-    { "src": "/manifest.json", "dest": "/manifest.json" },
-    { "src": "/favicon.ico", "dest": "/favicon.ico" },
-    { "src": "/static/(.*)", "dest": "/static/$1" },
-    { "src": "/(.*)", "dest": "src/server.js" }
+    {
+      "src": "/(.*)",
+      "dest": "src/server.js"
+    }
   ]
 }
