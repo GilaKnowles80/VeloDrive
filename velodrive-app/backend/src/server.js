@@ -29,7 +29,7 @@ if (process.env.SENTRY_DSN) {
   try {
     // eslint-disable-next-line global-require, import/no-unresolved
     Sentry = require('@sentry/node');
-    Sentry.init({ dsn: process.env.SENTRY_DSN, environment: process.env.NODE_ENV || 'production', tracesSampleRate: 0 });
+    Sentry.init({ dsn: process.env.SENTRY_DSN, environment: process.env.NODE_ENV || 'development', tracesSampleRate: 0 });
   } catch (_) { /* optional dependency */ }
 }
 
