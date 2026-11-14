@@ -1,70 +1,66 @@
 # VeloDrive - All Vehicle Rental Marketplace
 
-A complete vehicle rental platform supporting all vehicle types (motorcycle, cars, vans, SUV, sedan, coupe, hatchback, pickup, off-road, sport, micro, convertible, wagon, crossover, muscle, roadster, cabriolet, limousine, formula 1, mini van, liftback, 10-wheeler trucks, trailer trucks, dump trucks, wheel loaders, payloaders, boom trucks, cranes, and more).
+A complete vehicle rental marketplace platform built using JavaScript, Node.js, and Express, supporting 28 distinct vehicle categories (motorcycles, cars, vans, SUVs, trucks, and specialized equipment).
 
 ## Features
 
-- **Three User Roles**: Admin, Vehicle Owner, Renter
+- **Three User Roles**: Admin, Vehicle Owner (`Vehicles Owner`), Renter
 - **Authentication**: Register/Login with JWT, role-based access
-- **Vehicle Registration**: All vehicle types with certificates, specs, pricing, marketing ads
-- **Document Uploads**: Certificate of registration, proof of ownership, original certificates, NBI clearance, tax certificates, valid ID, driver's license
-- **Owner Membership**: Php 2,500 one-time yearly platform fee + Php 250 service charge per booking
-- **E-Wallet**: Connected to bank account, withdrawable, supports refunds
-- **Split Payment Escrow**: AaaS-plus-transaction model — renter pays â†’ escrow â†’ split (owner 90%, admin 10%)
-- **Rental Flow**: Pickup/return/destination points, number of days, fuel/damage/delay charges
-- **Admin Dashboard**: Monitor all transactions, users, vehicles, bookings, vehicle location tracking
-- **Owner Dashboard**: Manage vehicles, track bookings, earnings, vehicle location tracking
-- **Renter Dashboard**: Browse vehicles, book rentals, track active rentals
-- **GPS Tracker**: Vehicle locations visible on Admin & Owner dashboards (Google Maps / Waze)
-- **GDPR**: Consent management, data export, right to erasure
-- **Communication**: Phone call, SMS (text), and email notifications
-- **Deployment**: Neon Database (serverless PostgreSQL) + Vercel
+- **Vehicle Registration**: Multi-category vehicle profiles with certificates, specs, and pricing
+- **Document Uploads**: Certificate of registration, proof of ownership, NBI clearance, tax certificates, valid ID, driver's license
+- **Owner Membership**: Php 4,999 one-time yearly platform fee + Php 499 service charge per booking
+- **Live Payments & Escrow**: Integrated PayPal REST API checkout, digital wallets (GCash/Maya integration workflows), split-payment escrow model
+- **Rental Flow**: Pickup/return/destination points, duration tracking, fuel/damage/delay calculations
+- **Dashboards**: Dedicated Admin, Owner, and Renter dashboards with operational metrics and telemetry
+- **GPS Tracker**: Vehicle location tracking visible on Admin & Owner dashboards
+- **GDPR Compliance**: Consent management, data export, and right-to-erasure tools
+- **Automated Communication**: Email notifications powered by **Resend**, alongside SMS and phone integration
+- **Deployment**: Neon Serverless PostgreSQL + Vercel
 
 ## Project Structure
 
-```
 velodrive-app/
-â”œâ”€â”€ backend/              # Node.js + Express API
-â”‚   â”œâ”€â”€ src/
-â”‚   â”‚   â”œâ”€â”€ config/       # Database config (Neon support)
-â”‚   â”‚   â”œâ”€â”€ controllers/  # Route controllers
-â”‚   â”‚   â”œâ”€â”€ models/       # Sequelize models
-â”‚   â”‚   â”œâ”€â”€ routes/       # API routes
-â”‚   â”‚   â”œâ”€â”€ middleware/   # Auth, upload, GDPR, error handling
-â”‚   â”‚   â”œâ”€â”€ services/     # Wallet, payment, GDPR, communication
-â”‚   â”‚   â”œâ”€â”€ utils/        # Seed script
-â”‚   â”‚   â””â”€â”€ uploads/      # File uploads
-â”‚   â”œâ”€â”€ package.json
-â”‚   â””â”€â”€ .env.example
-â”œâ”€â”€ frontend/             # React + Vite + Tailwind
-â”‚   â”œâ”€â”€ src/
-â”‚   â”‚   â”œâ”€â”€ components/   # Navbar, ProtectedRoute
-â”‚   â”‚   â”œâ”€â”€ context/      # AuthContext
-â”‚   â”‚   â”œâ”€â”€ pages/        # Home, Login, Register, Dashboards, Wallet, Profile, GDPR
-â”‚   â”‚   â”œâ”€â”€ utils/        # API client
-â”‚   â”‚   â””â”€â”€ App.jsx
-â”‚   â”œâ”€â”€ package.json
-â”‚   â”œâ”€â”€ vite.config.js
-â”‚   â””â”€â”€ tailwind.config.js
-â”œâ”€â”€ vercel.json           # Vercel deployment config
-â””â”€â”€ README.md
-```
+├── backend/              # Node.js + Express API
+│   ├── src/
+│   │   ├── config/       # Database config (Neon SSL support)
+│   │   ├── controllers/  # Route controllers
+│   │   ├── models/       # Sequelize models
+│   │   ├── routes/       # API routes
+│   │   ├── middleware/   # Auth, upload, GDPR, error handling
+│   │   ├── services/     # Wallet, payment, GDPR, Resend email
+│   │   ├── utils/        # Seed script
+│   │   └── uploads/      # File uploads
+│   ├── package.json
+│   └── .env.example
+├── frontend/             # React + Vite + Tailwind
+│   ├── src/
+│   │   ├── components/   # Navbar, ProtectedRoute
+│   │   ├── context/      # AuthContext
+│   │   ├── pages/        # Home, Login, Register, Dashboards, Wallet, Profile, GDPR
+│   │   ├── utils/        # API client
+│   │   └── App.jsx
+│   ├── package.json
+│   ├── vite.config.js
+│   └── tailwind.config.js
+├── vercel.json           # Vercel deployment config
+└── README.md
+
 
 ## Tech Stack
 
-- **Backend**: Node.js, Express, Sequelize ORM, PostgreSQL (Neon serverless)
+- **Backend**: Node.js, Express, Sequelize ORM, PostgreSQL (Neon Serverless)
 - **Frontend**: React 18, Vite, Tailwind CSS, React Router, Lucide React
 - **Authentication**: JWT + bcrypt
-- **Payments/Escrow**: Split payment logic (built-in, integrate with GCash/PayMaya/Stripe in production)
-- **Communication**: Nodemailer (email), Twilio (SMS & voice calls)
-- **Deployment**: Vercel, Neon Database
+- **Payments**: PayPal REST API (Partner Referrals & Checkout)
+- **Email Service**: Resend API (`RESEND_API_KEY`)
+- **Deployment**: Vercel & Neon Database
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js v18+
-- PostgreSQL (local) or Neon Database account (serverless)
+- Neon Database account (serverless PostgreSQL)
 - npm
 
 ### Backend Setup
@@ -72,75 +68,62 @@ velodrive-app/
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env with your database credentials (Neon DATABASE_URL or local PostgreSQL)
+# Edit .env with your Neon DATABASE_URL and Resend API key credentials
 npm install
 npm run seed        # Creates default admin user
 npm run dev         # Start on http://localhost:5000
-```
-
 Default admin credentials:
 
-- Email: `gctravelandtours2021@gmail.com`
-- Password: set via `ADMIN_PASSWORD` in `.env` (never commit real passwords)
+Email: gctravelandtours2021@gmail.com
 
-### Frontend Setup
+Password: set via ADMIN_PASSWORD in .env
 
-```bash
+Frontend Setup
+Bash
 cd frontend
 npm install
 npm run dev         # Start on http://localhost:3000
-```
+Canonical Deployment Architecture
+App: Vercel_Project ID_Canonical_URL Run Vercel CLI From
+Frontend: frontend-2o4j=https://www.gctravelandtour.com/ (velodrive-app/frontend)
+Backend: velodrive-backend=https://api.gctravelandtour.com/ (velodrive-app/backend)
+Important: Never run vercel link or vercel deploy from the repository root. Always run commands from the respective frontend or backend directory.
 
-## Canonical deployment (one path each — do not create/link others)
+Database: Connect your backend exclusively to your Neon PostgreSQL database URL (DATABASE_URL).
 
-| App | Vercel project | Canonical URL | Run Vercel CLI from | Link command |
-|---|---|---|---|---|
-| **Frontend** | `frontend-2o4j` | https://www.gctravelandtour.com (alias: https://frontend-2o4j.vercel.app) | `velodrive-app/frontend` | `vercel link --yes --project frontend-2o4j` |
-| **Backend** | `velo-drive-lj7t` | https://velo-drive-lj7t.vercel.app | `velodrive-app/backend` | `vercel link --yes --project velo-drive-lj7t` |
+Deploying Backend
+Add environment variables in Vercel (velodrive-backend):
 
-- **Never** run `vercel link` or `vercel deploy` from repo root (`C:\Users\Gila\VeloDrive`) or `velodrive-app/` root. Only the two app folders above may contain `.vercel/project.json`.
-- Frontend API proxy: `frontend/vercel.json` rewrites `/api/*` to `https://velo-drive-lj7t.vercel.app/api/$1` (canonical backend). Keep this in sync with the backend project.
-- **Neon (database):** use **one** Neon project/branch connection string. Set the same `DATABASE_URL` in Vercel for the **backend** project (`velo-drive-lj7t`) and in local `backend/.env` (gitignored). Do not create parallel Neon connection strings for other Vercel projects.
-- Vercel dashboard links you shared (deployment views): Frontend https://vercel.com/gilaknowles80/frontend-2o4j/7pj3VHhzcgaMYaJVbEatbBZy7pWr — Backend https://vercel.com/gilaknowles80/velo-drive-lj7t/9tR2BRMRj1PGw2L1mHGx5QSxUTVm
+DATABASE_URL (Neon PostgreSQL string)
 
-## Deployment
+RESEND_API_KEY (Resend API key)
 
-### Backend on Vercel + Neon Database (canonical)
+FROM_EMAIL (<noreply.velodrive@gctravelandtour.com>)
 
-1. Neon: create/use **one** serverless PostgreSQL database and copy its `DATABASE_URL`.
-2. Vercel project: **`velo-drive-lj7t`** (backend). Link only from `velodrive-app/backend`.
-3. Add environment variables in Vercel (`velo-drive-lj7t`):
-   - `DATABASE_URL` (single Neon connection string)
-   - `JWT_SECRET`, `FRONTEND_URL` (set to `https://www.gctravelandtour.com` in production; comma-list additional allowed origins if needed)
-   - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
-   - `SENDGRID_API_KEY`, `FROM_EMAIL`
-4. Deploy: `cd velodrive-app/backend && vercel --prod --yes`
+JWKS_SECRET, FRONTEND_URL (https://www.gctravelandtour.com)
 
-### Frontend on Vercel (canonical)
+PAYPAL_CLIENT_ID, PAYPAL_SECRET_KEY, PAYPAL_MODE
 
-1. Vercel project: **`frontend-2o4j`**. Link only from `velodrive-app/frontend`.
-2. Build command: `npm run build` — Output: `dist`
-3. API proxy targets canonical backend (`velo-drive-lj7t`) via `frontend/vercel.json`.
-4. Deploy: `cd velodrive-app/frontend && vercel --prod --yes`
+Deploy:
 
-## Communication Channels
+Bash
+cd velodrive-app/backend
+vercel --prod --yes
+Deploying Frontend
+Build and deploy:
 
-All dashboards (Admin, Owner, Renter) support notifications via:
+Bash
+cd velodrive-app/frontend
+vercel --prod --yes
+GDPR Compliance
+Consent collection during user registration
 
-- **Phone Call** (voice)
-- **Phone Text / SMS**
-- **Email**
+Data export endpoint: GET /api/users/gdpr/export
 
-Configure `TWILIO_*` and `SENDGRID_API_KEY` in `.env` to enable real notifications. In development, communications are mocked and logged to console.
+Data erasure endpoint: DELETE /api/users/gdpr/erase
 
-## GDPR Compliance
+Consent withdrawal endpoint: POST /api/users/gdpr/withdraw-consent
 
-- Consent collection on registration
-- Data export endpoint: `GET /api/users/gdpr/export`
-- Data erasure endpoint: `DELETE /api/users/gdpr/erase`
-- Consent withdrawal: `POST /api/users/gdpr/withdraw-consent`
-
-## License
-
-MIT
-
+License
+Copyright © 2026 Gila Arayan Cain Knowles & Catherine Arayan Cain Knowles. All rights reserved.
+Proprietary software developed for VeloDrive and ArGie-C Travel and Tours Agency.
