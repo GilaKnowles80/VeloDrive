@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function sendOTPEmailResend(email, otpCode) {
   try {
-    const from = process.env.FROM_EMAIL || 'VeloDrive <onboarding@resend.dev>';
+    const from = process.env.FROM_EMAIL || 'noreply.velodrive@gctravelandtour.com';
     const data = await resend.emails.send({
       from,
       to: [email],

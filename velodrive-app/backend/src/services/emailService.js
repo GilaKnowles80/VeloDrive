@@ -28,7 +28,7 @@ const buildOtpEmail = (otpCode) => ({
 const sendViaResend = async (to, otpCode) => {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return null;
-  const from = process.env.FROM_EMAIL || process.env.EMAIL_FROM || 'VeloDrive <onboarding@resend.dev>';
+  const from = process.env.FROM_EMAIL || process.env.EMAIL_FROM || 'noreply.velodrive@gctravelandtour.com';
   const { subject, text, html } = buildOtpEmail(otpCode);
   const resp = await withTimeout(fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -125,7 +125,7 @@ const sendResetPasswordEmail = async (email, resetUrl) => {
       if (process.env.RESEND_API_KEY) {
         try {
           const apiKey = process.env.RESEND_API_KEY;
-          const from = process.env.FROM_EMAIL || process.env.EMAIL_FROM || 'VeloDrive <onboarding@resend.dev>';
+          const from = process.env.FROM_EMAIL || process.env.EMAIL_FROM || 'noreply.velodrive@gctravelandtour.com';
           const { subject, text, html } = buildResetPasswordEmail(resetUrl);
           const resp = await withTimeout(fetch('https://api.resend.com/emails', {
             method: 'POST',

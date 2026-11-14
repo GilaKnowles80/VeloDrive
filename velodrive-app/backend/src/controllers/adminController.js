@@ -3,8 +3,13 @@ const { User, Vehicle, Booking, Transaction, Wallet } = require('../models');
 
 const USER_ATTRS = ['id', 'firstName', 'lastName', 'email', 'phone', 'role', 'isActive', 'isEmailVerified', 'createdAt'];
 
-// The platform earns through the flat per-booking service charge and any commission.
-const REVENUE_TYPES = ['service_charge', 'commission'];
+// The platform earns through the 10% flat per-booking service charge and platform membership subscriptions.
+const REVENUE_TYPES = ['service_charge', 'subscription', 'commission'];
+const SERVICE_CHARGE_RATE = Number(process.env.SERVICE_CHARGE_FLAT_FEE) || 0.10;
+const PLATFORM_MEMBERSHIP_FEE = { 
+  monthly: Number(process.env.PLATFORM_MEMBERSHIP_FEE) || 499.00, 
+  yearly: Number(process.env.PLATFORM_MEMBERSHIP_FEE) || 4999.00,
+ };
 
 const getDashboardStats = async (req, res) => {
   try {

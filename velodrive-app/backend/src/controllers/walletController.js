@@ -4,7 +4,7 @@ const { debitWallet, getOrCreateWallet } = require('../services/paymentService')
 const { createTopupOrder, capturePayPalPayment } = require('../services/paypalService');
 
 const MIN_AMOUNT = 1;
-const MAX_AMOUNT = 100000;
+const MAX_AMOUNT = 10000000;
 const HISTORY_LIMIT = 100;
 
 const parseAmount = (raw) => {
