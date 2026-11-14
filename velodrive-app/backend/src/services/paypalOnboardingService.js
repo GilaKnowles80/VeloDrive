@@ -98,9 +98,6 @@ const generatePartnerOnboardingLink = async ({ ownerEmail, businessName }) => {
       business_details: {
         names: [{ legal_name: businessName }],
       },
-      // Note: ownerEmail is not a top-level partner-referrals field; it is
-      // captured on the PayPal onboarding form itself. We record it locally
-      // for correlation once the owner completes onboarding.
     }),
     signal,
   });
@@ -179,7 +176,6 @@ const getPartnerReferral = async (trackingId) => {
   }
 
   const data = await response.json();
-  // partner_customer_id is the onboarded merchant ID
   const partnerCustomerId = data.partner_customer_id || null;
   const status = data.status || null;
 
