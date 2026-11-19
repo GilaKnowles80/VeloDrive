@@ -4,8 +4,8 @@
   "type": "module",
   "main": "./server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "npm --prefix backend start",
+    "dev": "npm --prefix backend run dev"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1172.0",
