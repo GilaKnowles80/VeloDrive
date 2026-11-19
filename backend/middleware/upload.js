@@ -121,4 +121,4 @@ const localInventoryUpload = multer({
   fileFilter,
 });
 
-module.exports = { upload, localInventoryUpload, useS3, s3Client };
+export { upload, localInventoryUpload, useS3, s3Client };

@@ -40,5 +40,4 @@ const logGDPRConsent = async (userId, consentType, isGranted, req, version) => {
     console.error('GDPR log error:', error.message);
   }
 };
-
-module.exports = { requireGDPRConsent, logGDPRConsent };
+export { requireGDPRConsent, logGDPRConsent };
