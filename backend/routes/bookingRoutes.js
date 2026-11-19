@@ -17,4 +17,4 @@ router.put('/:id/start', protect, authorize('owner'), startRental);
 router.put('/:id/complete', protect, authorize('owner'), completeRental);
 router.put('/:id/cancel', protect, authorize('renter'), cancelBooking);
 
-module.exports = router;
+export default router;

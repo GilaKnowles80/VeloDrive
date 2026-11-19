@@ -18,4 +18,4 @@ router.post('/capture', protect, retiredWalletPayment);
 router.post('/account', protect, savePaymentAccountHandler);
 router.get('/account', protect, getPaymentAccountHandler);
 
-module.exports = router;
+export default router;

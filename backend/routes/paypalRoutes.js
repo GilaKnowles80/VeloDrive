@@ -186,4 +186,4 @@ router.post('/capture', protect, authorize('renter', 'owner', 'admin'), captureP
  */
 router.get('/order/:orderId', protect, getPayPalOrder);
 
-module.exports = router;
+export default router;

@@ -58,4 +58,4 @@ router.post('/:vehicleId/gps', protect, authorize('owner', 'admin'), updateGPSLo
 router.get('/:vehicleId/gps', protect, authorize('owner', 'admin'), getVehicleGPS);
 router.get('/:vehicleId/gps-history', protect, authorize('owner', 'admin'), getGPSHistory);
 
-module.exports = router;
+export default router;

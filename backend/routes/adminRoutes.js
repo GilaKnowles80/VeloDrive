@@ -17,4 +17,4 @@ router.get('/inventory', protect, authorize('admin'), getAdminInventory);
 router.put('/vehicles/:id/verify', protect, authorize('admin'), verifyVehicle);
 router.put('/users/:id/suspend', protect, authorize('admin'), suspendUser);
 
-module.exports = router;
+export default router;

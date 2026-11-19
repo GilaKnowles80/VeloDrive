@@ -249,4 +249,4 @@ const paymentWebhook = async (req, res) => {
 router.post('/payment', verifyPayPalSignature, paymentWebhook);
 router.post('/subscription', verifyPayPalSignature, paymentWebhook);
 
-module.exports = router;
+export default router;

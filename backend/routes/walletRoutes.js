@@ -11,4 +11,4 @@ router.post('/topup/capture', protect, captureTopup);
 
 router.post('/withdraw', protect, withdrawWallet);
 
-module.exports = router;
+export default router;

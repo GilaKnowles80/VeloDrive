@@ -15,4 +15,4 @@ router.post('/refresh', authLimiter, refreshToken);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
 
-module.exports = router;
+export default router;

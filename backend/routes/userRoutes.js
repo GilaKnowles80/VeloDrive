@@ -11,4 +11,4 @@ router.delete('/gdpr/erase', protect, eraseMyData);
 router.post('/gdpr/withdraw-consent', protect, withdrawMyConsent);
 
 // THIS IS CRITICAL: It must export the router function directly, NOT an object like { router }
-module.exports = router;
+export default router;

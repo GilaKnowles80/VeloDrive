@@ -30,4 +30,4 @@ router.post('/membership', protect, authorize('owner'), async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
