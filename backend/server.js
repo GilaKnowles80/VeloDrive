@@ -4,14 +4,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import { sequelize, connectDB } from './config/database.js';
 import { getEnvironmentReadiness } from './config/runtimeReadiness.js';
 import errorHandler from './middleware/errorHandler.js';
 import { requestId } from './middleware/requestId.js';
 import { apiLimiter } from './middleware/rateLimit.js';
-// Apply rate limiting to your API routes
-app.use('/api/', apiLimiter);
 
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
@@ -24,11 +23,14 @@ import paypalRoutes from './routes/paypalRoutes.js';
 import paymentsRoutes from './routes/paymentsRoutes.js';
 import ownerRoutes from './routes/ownerRoutes.js';
 
+// ES Module fix for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Optional Sentry (enable with SENTRY_DSN env var)
 let Sentry = null;
 if (process.env.SENTRY_DSN) {
   try {
-    // eslint-disable-next-line global-require, import/no-unresolved
     Sentry = require('@sentry/node');
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
@@ -156,7 +158,7 @@ app.use('/api', async (req, res, next) => {
   }
 });
 
-// General API rate limit
+// General API rate limit applied safely after app is initialized
 app.use('/api', apiLimiter);
 
 // API routes
@@ -182,7 +184,7 @@ if (Sentry && Sentry.Handlers && Sentry.Handlers.errorHandler) {
 }
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5173;
 
 const startServer = async () => {
   if (process.env.VERCEL) return;
@@ -195,4 +197,5 @@ const startServer = async () => {
 
 startServer();
 
-module.exports = app;
+// Correct ES Module export for Vercel
+export default app;
