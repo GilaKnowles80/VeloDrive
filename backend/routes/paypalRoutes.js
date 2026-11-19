@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect, authorize } from '../middleware/auth.js';
-import { capturePayPalOrder, getPayPalOrder } from '../controllers/paypalController.cjs';
+import { capturePayPalOrder, getPayPalOrder } from '../controllers/paypalController.js';
 import { generatePartnerOnboardingLink, getPartnerReferral } from '../services/paypalOnboardingService.js';
 import db from '../models/index.js';
 

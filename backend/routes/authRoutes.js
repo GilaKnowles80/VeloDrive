@@ -10,8 +10,8 @@ import {
   refreshToken, 
   logout, 
   getMe 
-} from '../src/controllers/authController.cjs';
-import { protect } from '../middleware/auth.js'; // or whatever extension your middleware uses
+} from '../controllers/authController.js';
+import { protect } from '../middleware/auth.js';
 import { authLimiter, authSensitiveLimiter } from '../middleware/rateLimit.js';
 
 const router = express.Router();

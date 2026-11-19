@@ -5,7 +5,7 @@ import {
   requestTopup,
   captureTopup,
   withdrawWallet,
-} from '../controllers/walletController.cjs';
+} from '../controllers/walletController.js';
 
 const router = express.Router();
 

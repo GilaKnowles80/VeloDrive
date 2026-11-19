@@ -10,7 +10,7 @@ import {
   getVehicleGPS,
   getGPSHistory,
   updateVehicleStatus,
-} from '../controllers/vehicleController.cjs';
+} from '../controllers/vehicleController.js';
 import { upload } from '../middleware/upload.js';
 
 const router = express.Router();

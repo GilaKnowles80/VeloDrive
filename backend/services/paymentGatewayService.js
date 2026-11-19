@@ -9,7 +9,7 @@ const MAX_AMOUNT = 10000000;
 
 const buildReference = (prefix) => `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
 
-const parseAmount = (raw) => {
+export const parseAmount = (raw) => {
   const value = Number(raw);
   if (!Number.isFinite(value)) return null;
   const rounded = Number(value.toFixed(2));
@@ -152,21 +152,23 @@ export const createPayment = async ({ userId, amount, paymentMethod, returnUrl, 
         internalReference: reference,
         amount: parsedAmount,
         currency: 'PHP',
-        instructions: `Transfer Php ${parsedAmount.toFixed(2)} to ${user.bankName} account ${user.bankAccountNumber} (${user.bankAccountName}). Reference: ${reference}`,
-        bankName: user.bankName,
-        bankAccountName: user.bankAccountName,
-        bankAccountNumber: user.bankAccountNumber,
-        message: 'Bank transfer instructions generated. Complete the transfer, then verify below.',
+        instructions: `Transfer Php ${parsedAmount.toFixed(2)} to ${user.bankName} account ${user.bankAccountNumber} (${user.bankAccountName}). Use reference code: ${reference}`,
+        bankDetails: {
+          bankName: user.bankName,
+          bankAccountName: user.bankAccountName,
+          bankAccountNumber: user.bankAccountNumber,
+        },
+        message: 'Bank transfer instructions generated. Complete the deposit, then verify below.',
       };
     }
 
     default:
-      return { success: false, error: 'Unsupported payment method. Use paypal, gcash, or bank_transfer.' };
+      return { success: false, error: 'Unsupported payment method. Choose paypal, gcash, or bank_transfer.' };
   }
 };
 
 /**
- * Capture/complete a payment and credit the wallet.
+ * Capture / confirm a payment.
  * For PayPal: verifies the capture server-side.
  * For GCash/bank_transfer: marks the pending transaction as completed (user self-confirms or admin verifies).
  */
@@ -179,38 +181,26 @@ export const capturePayment = async ({ userId, paymentMethod, referenceId, confi
   switch (paymentMethod) {
     case 'paypal': {
       if (!referenceId) {
-        return { success: false, error: 'PayPal order id is required' };
+        return { success: false, error: 'PayPal order ID is required.' };
       }
 
-      const existing = await Transaction.findOne({
-        where: { userId, type: 'wallet_topup', status: 'completed', 'metadata.paypalOrderId': referenceId },
+      const tx = await Transaction.findOne({
+        where: {
+          userId,
+          type: 'wallet_topup',
+          status: 'pending',
+        },
+        order: [['createdAt', 'DESC']],
       });
-      if (existing) {
-        const wallet = await user.getWallet || (await Wallet.findOne({ where: { userId } }));
-        return { success: true, alreadyProcessed: true, wallet, amount: Number(existing.amount) };
-      }
 
       const capture = await capturePayPalPayment(referenceId);
       if (!capture.success) {
         return { success: false, error: capture.error || 'PayPal capture failed' };
       }
 
-      const unit = capture.paypalResponse?.purchase_units?.[0];
-      const expectedRef = `wallet_${userId}`;
-      if (unit?.reference_id && unit.reference_id !== expectedRef) {
-        return { success: false, error: 'This PayPal order does not belong to your wallet' };
-      }
-
-      const amount = Number(capture.amount);
-      if (!Number.isFinite(amount) || amount <= 0) {
-        return { success: false, error: 'PayPal returned an invalid captured amount' };
-      }
-
-      const tx = await Transaction.findOne({
-        where: { userId, type: 'wallet_topup', status: 'pending', 'metadata.paypalOrderId': referenceId },
-      });
-      if (!tx) {
-        return { success: false, error: 'No pending top-up found for this PayPal order' };
+      const amount = Number(capture.amount || (tx ? tx.amount : 0));
+      if (!amount || amount <= 0) {
+        return { success: false, error: 'Could not determine captured amount from PayPal.' };
       }
 
       const result = await sequelize.transaction(async (t) => {
@@ -223,9 +213,11 @@ export const capturePayment = async ({ userId, paymentMethod, referenceId, confi
         wallet.balance = next;
         await wallet.save({ transaction: t });
 
-        tx.status = 'completed';
-        tx.metadata = { ...tx.metadata, paypalTransactionId: capture.transactionId, capturedAt: new Date().toISOString() };
-        await tx.save({ transaction: t });
+        if (tx) {
+          tx.status = 'completed';
+          tx.metadata = { ...tx.metadata, paypalTransactionId: capture.transactionId, capturedAt: new Date().toISOString() };
+          await tx.save({ transaction: t });
+        }
 
         return { wallet, amount };
       });
@@ -279,4 +271,89 @@ export const capturePayment = async ({ userId, paymentMethod, referenceId, confi
       });
 
       return {
-        success
+        success: true,
+        message: `Wallet topped up via ${paymentMethod}`,
+        wallet: result.wallet,
+        amount: result.amount,
+      };
+    }
+
+    default:
+      return { success: false, error: 'Unsupported payment method.' };
+  }
+};
+
+/**
+ * Save or update user's bank/GCash account details.
+ */
+export const savePaymentAccount = async ({ userId, bankAccountName, bankAccountNumber, bankName, gcashNumber, paymentPreference, paypalEmail }) => {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  const updateData = {};
+  if (bankAccountName !== undefined) updateData.bankAccountName = bankAccountName || null;
+  if (bankAccountNumber !== undefined) updateData.bankAccountNumber = bankAccountNumber || null;
+  if (bankName !== undefined) updateData.bankName = bankName || null;
+  if (gcashNumber !== undefined) updateData.gcashNumber = gcashNumber || null;
+  if (paymentPreference !== undefined) updateData.paymentPreference = paymentPreference || null;
+  if (paypalEmail !== undefined) updateData.paypalEmail = paypalEmail || null;
+
+  await user.update(updateData);
+
+  // Sync bank fields to wallet if present
+  const wallet = await Wallet.findOne({ where: { userId } });
+  if (wallet && (bankAccountName !== undefined || bankAccountNumber !== undefined || bankName !== undefined)) {
+    await wallet.update({
+      bankAccountName: updateData.bankAccountName ?? wallet.bankAccountName,
+      bankAccountNumber: updateData.bankAccountNumber ?? wallet.bankAccountNumber,
+      bankName: updateData.bankName ?? wallet.bankName,
+    });
+  }
+
+  return {
+    success: true,
+    message: 'Payment account details saved',
+    account: {
+      bankAccountName: user.bankAccountName,
+      bankAccountNumber: user.bankAccountNumber,
+      bankName: user.bankName,
+      gcashNumber: user.gcashNumber,
+      paymentPreference: user.paymentPreference,
+      paypalEmail: user.paypalEmail,
+    },
+  };
+};
+
+/**
+ * Get user's saved payment account details.
+ */
+export const getPaymentAccount = async (userId) => {
+  const user = await User.findByPk(userId, {
+    attributes: ['bankAccountName', 'bankAccountNumber', 'bankName', 'gcashNumber', 'paymentPreference', 'paypalEmail', 'paypalVerified'],
+  });
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+  return {
+    success: true,
+    account: {
+      bankAccountName: user.bankAccountName,
+      bankAccountNumber: user.bankAccountNumber,
+      bankName: user.bankName,
+      gcashNumber: user.gcashNumber,
+      paymentPreference: user.paymentPreference,
+      paypalEmail: user.paypalEmail,
+      paypalVerified: user.paypalVerified,
+    },
+  };
+};
+
+export default {
+  createPayment,
+  capturePayment,
+  savePaymentAccount,
+  getPaymentAccount,
+  parseAmount,
+};

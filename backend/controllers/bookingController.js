@@ -1,9 +1,8 @@
 import { Op } from 'sequelize';
 import db from '../models/index.js';
+const { Booking, Vehicle, User, Transaction } = db;
 import { calculateBookingAmounts } from '../services/paymentService.js';
 import { createPayPalOrder } from '../services/paypalService.js';
-
-const { Booking, Vehicle, User, Transaction } = db;
 
 const USER_ATTRS = ['id', 'firstName', 'lastName', 'email', 'phone', 'role'];
 const ACTIVE_STATUSES = ['pending', 'confirmed', 'active'];
@@ -105,4 +104,134 @@ export const createBooking = async (req, res) => {
       status: 'pending',
     });
 
-    const frontendUrl = (process.env.FRONTEND_URL
+    const frontendUrl = (process.env.FRONTEND_URL || '').split(',')[0].trim();
+    const paypalOrder = await createPayPalOrder({
+      bookingId: booking.id,
+      ownerId: vehicle.ownerId,
+      salesAgentId: null,
+      basePrice: rentalAmount,
+      serviceChargeFee,
+      totalAmount,
+      currency: booking.currency,
+      returnUrl: `${frontendUrl}/booking-success/${booking.id}`,
+      cancelUrl: `${frontendUrl}/booking-cancel/${booking.id}`,
+      ownerPaypalEmail: owner.paypalEmail || process.env.PAYPAL_ADMIN_EMAIL,
+    });
+
+    if (!paypalOrder.success) {
+      await booking.destroy();
+      return res.status(502).json({
+        success: false,
+        message: 'Could not start the PayPal checkout. Please try again.',
+      });
+    }
+
+    booking.paypalOrderId = paypalOrder.orderId;
+    await booking.save();
+
+    await Transaction.create({
+      reference: `TXN-BK-${booking.id}`,
+      type: 'booking_payment',
+      userId: req.user.id,
+      bookingId: booking.id,
+      amount: totalAmount,
+      status: 'pending',
+      description: `Payment for booking ${booking.bookingReference}`,
+      metadata: { paypalOrderId: paypalOrder.orderId, provider: 'paypal', serviceChargeFee, ownerNetAmount },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Booking created. Complete the PayPal payment to confirm it.',
+      booking,
+      paypalOrder: {
+        orderId: paypalOrder.orderId,
+        approvalUrl: paypalOrder.approvalUrl,
+        status: paypalOrder.status,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getRenterBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.findAll({
+      where: { renterId: req.user.id },
+      include: [
+        { model: Vehicle },
+        { model: User, as: 'owner', attributes: USER_ATTRS },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json({ success: true, bookings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getOwnerBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.findAll({
+      where: { ownerId: req.user.id },
+      include: [
+        { model: Vehicle },
+        { model: User, as: 'renter', attributes: USER_ATTRS },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json({ success: true, bookings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getAllBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.findAll({
+      include: [
+        { model: Vehicle },
+        { model: User, as: 'renter', attributes: USER_ATTRS },
+        { model: User, as: 'owner', attributes: USER_ATTRS },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json({ success: true, bookings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getBookingById = async (req, res) => {
+  try {
+    const booking = await Booking.findByPk(req.params.id, {
+      include: [
+        { model: Vehicle },
+        { model: User, as: 'renter', attributes: USER_ATTRS },
+        { model: User, as: 'owner', attributes: USER_ATTRS },
+      ],
+    });
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    if (
+      req.user.role !== 'admin' &&
+      booking.ownerId !== req.user.id &&
+      booking.renterId !== req.user.id
+    ) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    res.json({ success: true, booking });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export default {
+  createBooking,
+  getRenterBookings,
+  getOwnerBookings,
+  getAllBookings,
+  getBookingById,
+};

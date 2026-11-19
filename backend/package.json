@@ -1,8 +1,8 @@
 {
   "name": "velodrive-backend",
   "version": "1.0.0",
-  "type": "",
-  "main": "src/server.js",
+  "type": "module",
+  "main": "./server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
@@ -29,6 +29,7 @@
     "sequelize": "^6.37.8"
   },
   "devDependencies": {
+    "mysql2": "^3.24.6",
     "nodemon": "^3.1.9",
     "sequelize-cli": "^6.6.2"
   }

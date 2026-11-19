@@ -116,4 +116,52 @@ export const completeRental = async (req, res) => {
     res.json({
       success: true,
       message: chargeResult.pending
-        ? '
+        ? 'Rental completed. Extra charges exceed the renter wallet balance and were recorded as outstanding.'
+        : 'Rental completed',
+      booking: escrowResult.booking || booking,
+      extraCharges: { total: extraTotal, ...chargeResult },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const cancelBooking = async (req, res) => {
+  try {
+    const booking = await findBooking(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (booking.renterId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+    if (['cancelled', 'completed'].includes(booking.status)) {
+      return res.status(409).json({ success: false, message: `Booking is already ${booking.status}` });
+    }
+
+    const reason = req.user.role === 'admin' ? 'Cancelled by admin' : 'Cancelled by renter';
+    const result = await refundBooking(booking.id, reason);
+
+    // Return vehicle to active and available on cancellation
+    await Vehicle.update(
+      { status: 'active', isAvailable: true },
+      { where: { id: booking.vehicleId } }
+    );
+
+    res.json({
+      success: true,
+      message: result.refunded
+        ? 'Booking cancelled and refunded to your wallet'
+        : 'Booking cancelled. No payment had been captured.',
+      booking: result.booking,
+      refunded: Boolean(result.refunded),
+    });
+  } catch (error) {
+    res.status(409).json({ success: false, message: error.message });
+  }
+};
+
+export default {
+  confirmBooking,
+  startRental,
+  completeRental,
+  cancelBooking,
+};

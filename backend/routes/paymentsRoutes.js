@@ -3,7 +3,7 @@ import { protect } from '../middleware/auth.js';
 import {
   savePaymentAccountHandler,
   getPaymentAccountHandler,
-} from '../controllers/paymentsController.cjs';
+} from '../controllers/paymentsController.js';
 
 const router = express.Router();
 

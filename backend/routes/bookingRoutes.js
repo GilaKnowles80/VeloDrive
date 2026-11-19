@@ -6,13 +6,13 @@ import {
   getOwnerBookings,
   getAllBookings, 
   getBookingById
-} from '../controllers/bookingController.cjs';
+} from '../controllers/bookingController.js';
 import { 
   confirmBooking, 
   startRental, 
   completeRental, 
   cancelBooking 
-} from '../controllers/bookingActions.cjs';
+} from '../controllers/bookingActions.js';
 
 const router = express.Router();
 

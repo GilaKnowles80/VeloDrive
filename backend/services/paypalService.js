@@ -529,3 +529,32 @@ export const verifyPayPalWebhook = async (headers, event) => {
     throw new Error(`PayPal OAuth request failed with status ${tokenResponse.status}`);
   }
   const tokenData = await tokenResponse.json();
+  if (!tokenData.access_token) throw new Error('PayPal OAuth response did not include an access token');
+
+  const verifyResponse = await fetch(`${apiBase}/v1/notifications/verify-webhook-signature`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tokenData.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(verification),
+    signal: AbortSignal.timeout(PAYPAL_TIMEOUT_MS),
+  });
+  if (!verifyResponse.ok) {
+    throw new Error(`PayPal webhook verification failed with status ${verifyResponse.status}`);
+  }
+  const verifyData = await verifyResponse.json();
+  return verifyData.verification_status === 'SUCCESS';
+};
+
+export default {
+  buildMultiPartyPaymentRequest,
+  createPayPalOrder,
+  capturePayPalPayment,
+  createTopupOrder,
+  getOrder,
+  verifyPayPalWebhook,
+  processSplitPayment,
+  processOwnerMembership,
+  refundPayment,
+};

@@ -1,9 +1,5 @@
-import {
-  createPayment,
-  capturePayment,
-  savePaymentAccount,
-  getPaymentAccount,
-} from '../services/paymentGatewayService.js';
+import { createPayment, capturePayment, savePaymentAccount, getPaymentAccount } from '../services/paymentGatewayService.js';
+import { protect } from '../middleware/auth.js';
 
 export const createPaymentHandler = async (req, res) => {
   try {
@@ -80,3 +76,5 @@ export default {
   createPaymentHandler,
   capturePaymentHandler,
   savePaymentAccountHandler,
+  getPaymentAccountHandler,
+};

@@ -1,0 +1,44 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const FOLDER_DIR = __dirname;
+const RETENTION_MS = 60 * 24 * 60 * 60 * 1000; // 60 days (2 months)
+
+export const getProfileMonitoringList = () => {
+  const now = Date.now();
+  const files = fs.readdirSync(FOLDER_DIR);
+  const activeRecords = [];
+
+  for (const file of files) {
+    if (file.endsWith('.js') || file === '.gitkeep') continue;
+
+    const fullPath = path.join(FOLDER_DIR, file);
+    const stats = fs.statSync(fullPath);
+    if (!stats.isFile()) continue;
+
+    const ageMs = now - stats.mtimeMs;
+    if (ageMs > RETENTION_MS) {
+      fs.unlinkSync(fullPath); // Auto-delete files older than 60 days
+      continue;
+    }
+
+    activeRecords.push({
+      category: 'Owner & Renter Profiles',
+      filename: file,
+      sizeBytes: stats.size,
+      recordedAt: stats.mtime,
+      expiresInDays: Math.ceil((RETENTION_MS - ageMs) / (24 * 60 * 60 * 1000)),
+      filePath: fullPath,
+    });
+  }
+
+  return activeRecords.sort((a, b) => new Date(b.recordedAt) - new Date(a.recordedAt));
+};
+
+export default {
+  getProfileMonitoringList,
+};

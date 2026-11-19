@@ -10,7 +10,7 @@ import {
   getAllTransactions, 
   exportTransactions,
   getAdminInventory
-} from '../controllers/adminController.cjs';
+} from '../controllers/adminController.js';
 
 const router = express.Router();
 

@@ -1,9 +1,8 @@
 import db from '../models/index.js';
+const { User, Document, Vehicle } = db;
 import { getOrCreateWallet } from '../services/paymentService.js';
 import { exportUserData, eraseUserData, withdrawConsent } from '../services/gdprService.js';
 import { fileToStorageValue, serializeDocument } from '../services/uploadStorage.js';
-
-const { User, Document, Vehicle } = db;
 
 const DOCUMENT_TYPES = [
   'cr', 'proof_of_ownership', 'or',

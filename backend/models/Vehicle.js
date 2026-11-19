@@ -122,3 +122,29 @@ export const Vehicle = sequelize.define('Vehicle', {
   lastGpsUpdate: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  isAvailable: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
+  isVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  status: {
+    type: DataTypes.ENUM('active', 'en-route', 'inactive', 'maintenance', 'suspended'),
+    defaultValue: 'active'
+  }
+}, {
+  tableName: 'vehicles',
+  timestamps: true,
+  indexes: [
+    { fields: ['ownerId'] },
+    { fields: ['type'] },
+    { fields: ['isAvailable'] },
+    { fields: ['isVerified'] },
+    { fields: ['status'] }
+  ]
+});
+
+export default Vehicle;
