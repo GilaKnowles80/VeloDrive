@@ -4,8 +4,8 @@
   "type": "module",
   "main": "./server.js",
   "scripts": {
-    "start": "npm --prefix backend start",
-    "dev": "npm --prefix backend run dev"
+    "start": "npm --prefix velodrive-app/backend start",
+    "dev": "npm --prefix velodrive-app/backend run build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1172.0",
