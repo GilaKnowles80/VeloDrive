@@ -5,13 +5,13 @@ const isProductionDeployment = (env) =>
     ? env.VERCEL_ENV === 'production'
     : env.NODE_ENV === 'production';
 
-const assertPayPalRuntimeAllowed = (env = process.env) => {
+export const assertPayPalRuntimeAllowed = (env = process.env) => {
   if (env.PAYPAL_MODE === 'live' && !isProductionDeployment(env)) {
     throw new Error('Live PayPal requests are disabled outside the production deployment');
   }
 };
 
-const getEnvironmentReadiness = (env = process.env) => {
+export const getEnvironmentReadiness = (env = process.env) => {
   const missing = [];
   const isDeployment = env.NODE_ENV === 'production' || Boolean(env.VERCEL);
   const isProduction = isProductionDeployment(env);
@@ -51,4 +51,4 @@ const getEnvironmentReadiness = (env = process.env) => {
   return { ok: missing.length === 0, missing };
 };
 
-module.exports = { assertPayPalRuntimeAllowed, getEnvironmentReadiness };
+
