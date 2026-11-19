@@ -1,4 +1,4 @@
-const { Resend } = require('resend');
+import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -25,4 +25,4 @@ async function sendOTPEmailResend(email, otpCode) {
   }
 }
 
-module.exports = { resend, sendOTPEmailResend };
+export { resend, sendOTPEmailResend };

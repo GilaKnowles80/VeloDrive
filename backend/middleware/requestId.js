@@ -1,4 +1,4 @@
-const { randomUUID } = require('crypto');
+import { randomUUID } from 'crypto';
 
 const requestId = (req, res, next) => {
   const incoming = req.headers['x-request-id'];

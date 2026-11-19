@@ -1,11 +1,13 @@
-'use strict';
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
+import multerS3 from 'multer-s3';
+import { s3Client, useS3 } from '../services/uploadStorage.js';
 
-const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
-const { randomUUID } = require('crypto');
-const multerS3 = require('multer-s3');
-const { s3Client, useS3 } = require('../services/uploadStorage');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const ensureDir = (dir) => {
   try {

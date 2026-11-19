@@ -1,4 +1,6 @@
-const { GDPRConsent } = require('../models');
+import db from '../models/index.js';
+
+const { GDPRConsent } = db;
 
 const requireGDPRConsent = async (req, res, next) => {
   try {
@@ -40,4 +42,5 @@ const logGDPRConsent = async (userId, consentType, isGranted, req, version) => {
     console.error('GDPR log error:', error.message);
   }
 };
+
 export { requireGDPRConsent, logGDPRConsent };
