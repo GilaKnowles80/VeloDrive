@@ -184,7 +184,7 @@ if (Sentry && Sentry.Handlers && Sentry.Handlers.errorHandler) {
 }
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5173;
+const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   if (process.env.VERCEL) return;

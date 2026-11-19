@@ -1,8 +1,6 @@
-'use strict';
-
-const { Sequelize } = require('sequelize');
-const pg = require('pg');
-require('dotenv').config();
+import { Sequelize } from 'sequelize';
+import pg from 'pg';
+import 'dotenv/config';
 
 // Prefer the connection string provided by the Neon Vercel integration.
 const rawDbUrl = process.env.NEON_POSTGRES_URL || process.env.DATABASE_URL;
@@ -28,7 +26,7 @@ const common = {
   },
 };
 
-const sequelize = dbUrl
+export const sequelize = dbUrl
   ? new Sequelize(dbUrl, {
       ...common,
       dialectOptions: {
@@ -49,7 +47,7 @@ const sequelize = dbUrl
       }
     );
 
-const connectDB = async () => {
+export const connectDB = async () => {
   try {
     await sequelize.authenticate();
     console.log('PostgreSQL connected successfully');
@@ -61,5 +59,3 @@ const connectDB = async () => {
     throw error;
   }
 };
-
-module.exports = { sequelize, connectDB };
