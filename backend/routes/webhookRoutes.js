@@ -1,12 +1,13 @@
-const express = require('express');
+import express from 'express';
+import crypto from 'crypto';
+import { Op } from 'sequelize';
+import { sequelize } from '../config/database.js';
+import db from '../models/index.js';
+import { getOrder, verifyPayPalWebhook } from '../services/paypalService.js';
+import { processBookingEscrow } from '../services/escrowService.js';
+
+const { Booking, Transaction, User, Wallet } = db;
 const router = express.Router();
-const crypto = require('crypto');
-const { Op } = require('sequelize');
-const { sequelize } = require('../config/database');
-const { protect } = require('../middleware/auth');
-const { Booking, Transaction, User, Wallet } = require('../models');
-const { getOrder, verifyPayPalWebhook } = require('../services/paypalService');
-const { processBookingEscrow } = require('../services/escrowService');
 
 const verifyResendSignature = (req, res, next) => {
   const secret = process.env.RESEND_WEBHOOK_SECRET;
@@ -208,45 +209,4 @@ const paymentWebhook = async (req, res) => {
           console.warn(JSON.stringify({ level: 'warn', msg: 'paypal_webhook_unmatched_capture', orderId: verified.orderId }));
         }
       }
-    } else if (eventType === 'PAYMENT.CAPTURE.DENIED') {
-      const orderId = resource?.supplementary_data?.related_ids?.order_id;
-      if (orderId) {
-        const booking = await Booking.findOne({ where: { paypalOrderId: orderId } });
-        if (booking && booking.paymentStatus === 'pending') {
-          booking.paymentStatus = 'failed';
-          booking.status = 'cancelled';
-          await booking.save();
-        }
-        let payment = await Transaction.findOne({
-          where: {
-            [Op.and]: [
-              { type: 'membership', status: 'pending' },
-              sequelize.where(sequelize.json('metadata.paypalOrderId'), orderId),
-            ],
-          },
-        });
-        if (!payment) {
-          payment = await Transaction.findOne({
-            where: { type: 'wallet_topup', status: 'pending', reference: `TOPUP-${orderId}` },
-          });
-        }
-        if (payment) {
-          payment.status = 'failed';
-          await payment.save();
-        }
-      }
-    } else {
-      console.log(JSON.stringify({ level: 'info', msg: 'paypal_webhook_ignored', type: eventType }));
-    }
-
-    return res.json({ success: true, received: true });
-  } catch (error) {
-    console.error(JSON.stringify({ level: 'error', msg: 'paypal_webhook_processing_error', error: error.message }));
-    return res.status(500).json({ success: false, message: 'PayPal webhook processing failed' });
-  }
-};
-
-router.post('/payment', verifyPayPalSignature, paymentWebhook);
-router.post('/subscription', verifyPayPalSignature, paymentWebhook);
-
-export default router;
+    } else if (eventType === '

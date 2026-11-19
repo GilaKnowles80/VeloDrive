@@ -1,10 +1,11 @@
-const express = require('express');
-const router = express.Router();
-const { protect } = require('../middleware/auth');
-const {
+import express from 'express';
+import { protect } from '../middleware/auth.js';
+import {
   savePaymentAccountHandler,
   getPaymentAccountHandler,
-} = require('../controllers/paymentsController');
+} from '../controllers/paymentsController.cjs';
+
+const router = express.Router();
 
 const retiredWalletPayment = (_req, res) => res.status(410).json({
   success: false,

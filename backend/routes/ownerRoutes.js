@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import { protect, authorize } from '../middleware/auth.js';
+import { processOwnerMembership } from '../services/paypalService.js';
+
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
-const { processOwnerMembership } = require('../services/paypalService');
 
 /**
  * Create PayPal order for owner yearly membership

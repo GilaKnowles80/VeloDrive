@@ -1,9 +1,11 @@
-const express = require('express');
+import express from 'express';
+import { protect, authorize } from '../middleware/auth.js';
+import { capturePayPalOrder, getPayPalOrder } from '../controllers/paypalController.cjs';
+import { generatePartnerOnboardingLink, getPartnerReferral } from '../services/paypalOnboardingService.js';
+import db from '../models/index.js';
+
+const { User } = db;
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
-const { capturePayPalOrder, getPayPalOrder } = require('../controllers/paypalController');
-const { generatePartnerOnboardingLink, getPartnerReferral } = require('../services/paypalOnboardingService');
-const { User } = require('../models');
 
 /**
  * Generate a PayPal Partner Referral onboarding link for a Vehicle Owner.

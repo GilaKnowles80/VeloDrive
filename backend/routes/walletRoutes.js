@@ -1,7 +1,13 @@
-const express = require('express');
+import express from 'express';
+import { protect } from '../middleware/auth.js';
+import {
+  getMyWallet,
+  requestTopup,
+  captureTopup,
+  withdrawWallet,
+} from '../controllers/walletController.cjs';
+
 const router = express.Router();
-const { protect } = require('../middleware/auth');
-const { getMyWallet, requestTopup, captureTopup, withdrawWallet } = require('../controllers/walletController');
 
 router.get('/', protect, getMyWallet);
 

@@ -1,11 +1,18 @@
-const express = require('express');
-const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
-const {
-  getDashboardStats, getAllUsers, getAllVehicles,
-  getAllBookings, verifyVehicle, suspendUser, getAllTransactions, exportTransactions,
+import express from 'express';
+import { protect, authorize } from '../middleware/auth.js';
+import {
+  getDashboardStats, 
+  getAllUsers, 
+  getAllVehicles,
+  getAllBookings, 
+  verifyVehicle, 
+  suspendUser, 
+  getAllTransactions, 
+  exportTransactions,
   getAdminInventory
-} = require('../controllers/adminController');
+} from '../controllers/adminController.cjs';
+
+const router = express.Router();
 
 router.get('/dashboard', protect, authorize('admin'), getDashboardStats);
 router.get('/users', protect, authorize('admin'), getAllUsers);

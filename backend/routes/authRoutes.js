@@ -1,8 +1,20 @@
-const express = require('express');
+import express from 'express';
+import { 
+  register, 
+  verifyOTP, 
+  resendOTP, 
+  login, 
+  loginVerifyOTP, 
+  forgotPassword, 
+  resetPassword, 
+  refreshToken, 
+  logout, 
+  getMe 
+} from '../src/controllers/authController.cjs';
+import { protect } from '../middleware/auth.js'; // or whatever extension your middleware uses
+import { authLimiter, authSensitiveLimiter } from '../middleware/rateLimit.js';
+
 const router = express.Router();
-const { register, verifyOTP, resendOTP, login, loginVerifyOTP, forgotPassword, resetPassword, refreshToken, logout, getMe } = require('../controllers/authController');
-const { protect } = require('../middleware/auth');
-const { authLimiter, authSensitiveLimiter } = require('../middleware/rateLimit');
 
 router.post('/register', authLimiter, register);
 router.post('/verify-otp', authSensitiveLimiter, verifyOTP);

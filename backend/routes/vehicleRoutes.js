@@ -1,7 +1,6 @@
-const express = require('express');
-const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
-const {
+import express from 'express';
+import { protect, authorize } from '../middleware/auth.js';
+import {
   createVehicle,
   getOwnerVehicles,
   getAllVehicles,
@@ -11,8 +10,10 @@ const {
   getVehicleGPS,
   getGPSHistory,
   updateVehicleStatus,
-} = require('../controllers/vehicleController');
-const { upload } = require('../middleware/upload');
+} from '../controllers/vehicleController.cjs';
+import { upload } from '../middleware/upload.js';
+
+const router = express.Router();
 
 const vehicleUpload = upload.fields([
   { name: 'or', maxCount: 1 },

@@ -1,11 +1,20 @@
-const express = require('express');
+import express from 'express';
+import { protect, authorize } from '../middleware/auth.js';
+import {
+  createBooking, 
+  getRenterBookings, 
+  getOwnerBookings,
+  getAllBookings, 
+  getBookingById
+} from '../controllers/bookingController.cjs';
+import { 
+  confirmBooking, 
+  startRental, 
+  completeRental, 
+  cancelBooking 
+} from '../controllers/bookingActions.cjs';
+
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
-const {
-  createBooking, getRenterBookings, getOwnerBookings,
-  getAllBookings, getBookingById
-} = require('../controllers/bookingController');
-const { confirmBooking, startRental, completeRental, cancelBooking } = require('../controllers/bookingActions');
 
 router.post('/', protect, authorize('renter'), createBooking);
 router.get('/my-rentals', protect, authorize('renter'), getRenterBookings);
