@@ -1,7 +1,7 @@
 {
   "name": "velodrive-backend",
   "version": "1.0.0",
-  "type": "module",
+  "type": "",
   "main": "src/server.js",
   "scripts": {
     "start": "node server.js",

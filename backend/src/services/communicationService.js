@@ -1,8 +1,8 @@
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 let twilioClient = null;
 try {
-  const twilio = require('twilio');
+  const { default: twilio } = await import('twilio');
   if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
     twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
   }
@@ -23,7 +23,7 @@ const transporter = nodemailer.createTransport({
 /**
  * Send email
  */
-const sendEmail = async ({ to, subject, text, html }) => {
+export const sendEmail = async ({ to, subject, text, html }) => {
   try {
     const info = await transporter.sendMail({
       from: `"VeloDrive" <${process.env.FROM_EMAIL || 'noreply@veodrive.com'}>`,
@@ -42,7 +42,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
 /**
  * Send SMS
  */
-const sendSMS = async ({ to, body }) => {
+export const sendSMS = async ({ to, body }) => {
   try {
     if (twilioClient) {
       const message = await twilioClient.messages.create({
@@ -64,7 +64,7 @@ const sendSMS = async ({ to, body }) => {
 /**
  * Make voice call (Twilio TwiML)
  */
-const sendVoiceCall = async ({ to, message }) => {
+export const sendVoiceCall = async ({ to, message }) => {
   try {
     if (twilioClient) {
       const call = await twilioClient.calls.create({
@@ -83,32 +83,4 @@ const sendVoiceCall = async ({ to, message }) => {
   }
 };
 
-/**
- * Notify via all channels: phone call, SMS, email
- */
-const notifyAllChannels = async ({ user, subject, message, bookingReference }) => {
-  const results = { email: null, sms: null, voiceCall: null };
 
-  if (user.email) {
-    results.email = await sendEmail({
-      to: user.email,
-      subject,
-      text: message,
-      html: `<p>${message}</p><p>Booking: ${bookingReference || ''}</p>`
-    });
-  }
-  if (user.phone) {
-    results.sms = await sendSMS({
-      to: user.phone,
-      body: `${subject}\n${message}\nBooking: ${bookingReference || ''}`
-    });
-    results.voiceCall = await sendVoiceCall({
-      to: user.phone,
-      message: `${subject}. ${message}`
-    });
-  }
-
-  return results;
-};
-
-module.exports = { sendEmail, sendSMS, sendVoiceCall, notifyAllChannels };

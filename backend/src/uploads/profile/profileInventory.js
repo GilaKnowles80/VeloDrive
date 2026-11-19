@@ -1,12 +1,14 @@
-'use strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const fs = require('fs');
-const path = require('path');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const FOLDER_DIR = __dirname;
 const RETENTION_MS = 60 * 24 * 60 * 60 * 1000; // 60 days (2 months)
 
-const getProfileMonitoringList = () => {
+export const getProfileMonitoringList = () => {
   const now = Date.now();
   const files = fs.readdirSync(FOLDER_DIR);
   const activeRecords = [];
@@ -37,4 +39,6 @@ const getProfileMonitoringList = () => {
   return activeRecords.sort((a, b) => new Date(b.recordedAt) - new Date(a.recordedAt));
 };
 
-module.exports = { getProfileMonitoringList };
+export default {
+  getProfileMonitoringList,
+};

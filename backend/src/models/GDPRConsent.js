@@ -1,9 +1,7 @@
-'use strict';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/database.js';
 
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
-
-const GDPRConsent = sequelize.define('GDPRConsent', {
+export const GDPRConsent = sequelize.define('GDPRConsent', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
@@ -51,4 +49,4 @@ const GDPRConsent = sequelize.define('GDPRConsent', {
   ]
 });
 
-module.exports = GDPRConsent;
+export default GDPRConsent;

@@ -1,9 +1,7 @@
-'use strict';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/database.js';
 
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
-
-const RefreshToken = sequelize.define('RefreshToken', {
+export const RefreshToken = sequelize.define('RefreshToken', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
@@ -35,4 +33,4 @@ const RefreshToken = sequelize.define('RefreshToken', {
   ]
 });
 
-module.exports = RefreshToken;
+export default RefreshToken;

@@ -1,7 +1,8 @@
-'use strict';
+import { fileURLToPath } from 'url';
+import { QueryTypes } from 'sequelize';
+import { sequelize, connectDB } from '../config/database.js';
+import db from '../models/index.js';
 
-const { QueryTypes } = require('sequelize');
-const { sequelize, connectDB } = require('../config/database');
 const {
   Booking,
   Transaction,
@@ -10,7 +11,7 @@ const {
   Document,
   GPSLocation,
   RefreshToken,
-} = require('../models');
+} = db;
 
 const requiredTables = [
   ['bookings', Booking],
@@ -46,7 +47,7 @@ const validateBaseSchema = async (transaction) => {
   }
 };
 
-const runMigrations = async () => {
+export const runMigrations = async () => {
   await connectDB();
 
   await sequelize.transaction(async (transaction) => {
@@ -84,7 +85,8 @@ const runMigrations = async () => {
   console.log('Database migration completed. Existing tables were not altered.');
 };
 
-if (require.main === module) {
+// ES Module equivalent of `require.main === module`
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   runMigrations()
     .catch((error) => {
       console.error('Database migration failed:', error.message);
@@ -93,4 +95,4 @@ if (require.main === module) {
     .finally(() => sequelize.close());
 }
 
-module.exports = { runMigrations };
+export default { runMigrations };

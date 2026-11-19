@@ -2,9 +2,9 @@
  * Resilience helpers for external calls (email/PayPal/3rd-party APIs).
  * No secrets; behavior controlled by env.
  */
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const withTimeout = async (promise, ms, label = 'operation') => {
+export const withTimeout = async (promise, ms, label = 'operation') => {
   let t;
   const timeout = new Promise((_, reject) => {
     t = setTimeout(() => {
@@ -20,7 +20,7 @@ const withTimeout = async (promise, ms, label = 'operation') => {
   }
 };
 
-const retry = async (fn, { retries = 2, baseDelayMs = 300, maxDelayMs = 3000, factor = 2, onRetry, shouldRetry } = {}) => {
+export const retry = async (fn, { retries = 2, baseDelayMs = 300, maxDelayMs = 3000, factor = 2, onRetry, shouldRetry } = {}) => {
   let attempt = 0;
   let last;
   while (attempt <= retries) {
@@ -39,7 +39,7 @@ const retry = async (fn, { retries = 2, baseDelayMs = 300, maxDelayMs = 3000, fa
   throw last;
 };
 
-class CircuitBreaker {
+export class CircuitBreaker {
   constructor({ name = 'circuit', failureThreshold = 5, resetMs = 30000 } = {}) {
     this.name = name;
     this.failureThreshold = failureThreshold;
@@ -76,4 +76,4 @@ class CircuitBreaker {
   }
 }
 
-module.exports = { withTimeout, retry, CircuitBreaker, sleep };
+export default { withTimeout, retry, CircuitBreaker, sleep };

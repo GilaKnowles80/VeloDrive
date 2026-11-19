@@ -1,11 +1,9 @@
-'use strict';
-
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const {
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
   assertPayPalRuntimeAllowed,
   getEnvironmentReadiness,
-} = require('../src/config/runtimeReadiness');
+} from '../src/config/runtimeReadiness.js';
 
 test('allows sandbox PayPal requests in development', () => {
   assert.doesNotThrow(() =>

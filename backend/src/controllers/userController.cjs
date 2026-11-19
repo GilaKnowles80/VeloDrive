@@ -1,7 +1,9 @@
-const { User, Document } = require('../models');
-const { getOrCreateWallet } = require('../services/paymentService');
-const { exportUserData, eraseUserData, withdrawConsent } = require('../services/gdprService');
-const { fileToStorageValue, serializeDocument } = require('../services/uploadStorage');
+import db from '../models/index.js';
+import { getOrCreateWallet } from '../services/paymentService.js';
+import { exportUserData, eraseUserData, withdrawConsent } from '../services/gdprService.js';
+import { fileToStorageValue, serializeDocument } from '../services/uploadStorage.js';
+
+const { User, Document, Vehicle } = db;
 
 const DOCUMENT_TYPES = [
   'cr', 'proof_of_ownership', 'or',
@@ -15,7 +17,7 @@ const PROFILE_FIELDS = [
   'companyName', 'companyAddress', 'contactNumber', 'contactPerson', 'position',
 ];
 
-const updateProfile = async (req, res) => {
+export const updateProfile = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
@@ -56,7 +58,7 @@ const updateProfile = async (req, res) => {
   }
 };
 
-const uploadDocument = async (req, res) => {
+export const uploadDocument = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -70,7 +72,6 @@ const uploadDocument = async (req, res) => {
       });
     }
 
-    const { Vehicle } = require('../models');
     let vehicleId = null;
     if (req.body.vehicleId) {
       const vehicle = await Vehicle.findByPk(req.body.vehicleId);
@@ -101,7 +102,7 @@ const uploadDocument = async (req, res) => {
   }
 };
 
-const exportMyData = async (req, res) => {
+export const exportMyData = async (req, res) => {
   try {
     const data = await exportUserData(req.user.id);
     res.json({ success: true, data });
@@ -110,7 +111,7 @@ const exportMyData = async (req, res) => {
   }
 };
 
-const eraseMyData = async (req, res) => {
+export const eraseMyData = async (req, res) => {
   try {
     const result = await eraseUserData(req.user.id);
     res.json({ success: true, message: result.message });
@@ -119,7 +120,7 @@ const eraseMyData = async (req, res) => {
   }
 };
 
-const withdrawMyConsent = async (req, res) => {
+export const withdrawMyConsent = async (req, res) => {
   try {
     const { consentType } = req.body;
     if (!consentType) {
@@ -132,4 +133,10 @@ const withdrawMyConsent = async (req, res) => {
   }
 };
 
-module.exports = { updateProfile, uploadDocument, exportMyData, eraseMyData, withdrawMyConsent };
+export default {
+  updateProfile,
+  uploadDocument,
+  exportMyData,
+  eraseMyData,
+  withdrawMyConsent,
+};

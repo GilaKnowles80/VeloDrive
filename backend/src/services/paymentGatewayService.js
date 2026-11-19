@@ -1,6 +1,8 @@
-const { createTopupOrder, capturePayPalPayment } = require('./paypalService');
-const { Wallet, Transaction, User } = require('../models');
-const { sequelize } = require('../config/database');
+import db from '../models/index.js';
+import { sequelize } from '../config/database.js';
+import { createTopupOrder, capturePayPalPayment } from './paypalService.js';
+
+const { Wallet, Transaction, User } = db;
 
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 10000000;
@@ -20,7 +22,7 @@ const parseAmount = (raw) => {
  * Returns provider-specific data (redirectUrl for PayPal, instructions for GCash/bank_transfer).
  * Creates a PENDING transaction row that gets completed on capture.
  */
-const createPayment = async ({ userId, amount, paymentMethod, returnUrl, cancelUrl }) => {
+export const createPayment = async ({ userId, amount, paymentMethod, returnUrl, cancelUrl }) => {
   const parsedAmount = parseAmount(amount);
   if (!parsedAmount) {
     return { success: false, error: `Enter an amount between Php ${MIN_AMOUNT} and Php ${MAX_AMOUNT}.` };
@@ -168,7 +170,7 @@ const createPayment = async ({ userId, amount, paymentMethod, returnUrl, cancelU
  * For PayPal: verifies the capture server-side.
  * For GCash/bank_transfer: marks the pending transaction as completed (user self-confirms or admin verifies).
  */
-const capturePayment = async ({ userId, paymentMethod, referenceId, confirmCode }) => {
+export const capturePayment = async ({ userId, paymentMethod, referenceId, confirmCode }) => {
   const user = await User.findByPk(userId);
   if (!user) {
     return { success: false, error: 'User not found' };
@@ -277,90 +279,4 @@ const capturePayment = async ({ userId, paymentMethod, referenceId, confirmCode 
       });
 
       return {
-        success: true,
-        message: `Wallet topped up via ${paymentMethod}`,
-        wallet: result.wallet,
-        amount: result.amount,
-      };
-    }
-
-    default:
-      return { success: false, error: 'Unsupported payment method.' };
-  }
-};
-
-/**
- * Save or update user's bank/GCash account details.
- */
-const savePaymentAccount = async ({ userId, bankAccountName, bankAccountNumber, bankName, gcashNumber, paymentPreference, paypalEmail }) => {
-  const user = await User.findByPk(userId);
-  if (!user) {
-    return { success: false, error: 'User not found' };
-  }
-
-  const updateData = {};
-  if (bankAccountName !== undefined) updateData.bankAccountName = bankAccountName || null;
-  if (bankAccountNumber !== undefined) updateData.bankAccountNumber = bankAccountNumber || null;
-  if (bankName !== undefined) updateData.bankName = bankName || null;
-  if (gcashNumber !== undefined) updateData.gcashNumber = gcashNumber || null;
-  if (paymentPreference !== undefined) updateData.paymentPreference = paymentPreference || null;
-  if (paypalEmail !== undefined) updateData.paypalEmail = paypalEmail || null;
-
-  await user.update(updateData);
-
-  // Sync bank fields to wallet if present
-  const WalletModel = require('../models').Wallet;
-  const wallet = await WalletModel.findOne({ where: { userId } });
-  if (wallet && (bankAccountName !== undefined || bankAccountNumber !== undefined || bankName !== undefined)) {
-    await wallet.update({
-      bankAccountName: updateData.bankAccountName ?? wallet.bankAccountName,
-      bankAccountNumber: updateData.bankAccountNumber ?? wallet.bankAccountNumber,
-      bankName: updateData.bankName ?? wallet.bankName,
-    });
-  }
-
-  return {
-    success: true,
-    message: 'Payment account details saved',
-    account: {
-      bankAccountName: user.bankAccountName,
-      bankAccountNumber: user.bankAccountNumber,
-      bankName: user.bankName,
-      gcashNumber: user.gcashNumber,
-      paymentPreference: user.paymentPreference,
-      paypalEmail: user.paypalEmail,
-    },
-  };
-};
-
-/**
- * Get user's saved payment account details.
- */
-const getPaymentAccount = async (userId) => {
-  const user = await User.findByPk(userId, {
-    attributes: ['bankAccountName', 'bankAccountNumber', 'bankName', 'gcashNumber', 'paymentPreference', 'paypalEmail', 'paypalVerified'],
-  });
-  if (!user) {
-    return { success: false, error: 'User not found' };
-  }
-  return {
-    success: true,
-    account: {
-      bankAccountName: user.bankAccountName,
-      bankAccountNumber: user.bankAccountNumber,
-      bankName: user.bankName,
-      gcashNumber: user.gcashNumber,
-      paymentPreference: user.paymentPreference,
-      paypalEmail: user.paypalEmail,
-      paypalVerified: user.paypalVerified,
-    },
-  };
-};
-
-module.exports = {
-  createPayment,
-  capturePayment,
-  savePaymentAccount,
-  getPaymentAccount,
-  parseAmount,
-};
+        success

@@ -5,9 +5,9 @@ process.env.S3_REGION = 'us-east-1';
 process.env.S3_ACCESS_KEY_ID = 'test-access-key';
 process.env.S3_SECRET_ACCESS_KEY = 'test-secret-key';
 
-const assert = require('node:assert/strict');
-const test = require('node:test');
-const { fileToStorageValue, serializeVehicle } = require('../src/services/uploadStorage');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { fileToStorageValue, serializeVehicle } from '../src/services/uploadStorage.js';
 
 test('stores S3 keys as references and keeps memory uploads as data URLs', () => {
   assert.equal(

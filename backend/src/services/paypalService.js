@@ -1,7 +1,9 @@
-const paypal = require('@paypal/checkout-server-sdk');
-const { Booking, Transaction, User, Vehicle } = require('../models');
-const { withTimeout, retry, CircuitBreaker } = require('../utils/resilience');
-const { assertPayPalRuntimeAllowed } = require('../config/runtimeReadiness');
+import paypal from '@paypal/checkout-server-sdk';
+import db from '../models/index.js';
+import { withTimeout, retry, CircuitBreaker } from '../utils/resilience.js';
+import { assertPayPalRuntimeAllowed } from '../config/runtimeReadiness.js';
+
+const { Booking, Transaction, User } = db;
 
 const paypalCircuit = new CircuitBreaker({ name: 'paypal', failureThreshold: 8, resetMs: 120000 });
 const PAYPAL_TIMEOUT_MS = Number(process.env.PAYPAL_TIMEOUT_MS || 20000);
@@ -24,21 +26,22 @@ const execPayPal = (request) =>
  * PayPal Environment Configuration
  */
 const environment = process.env.PAYPAL_MODE === 'live'
-  ? paypal.core.LiveEnvironment
-  : paypal.core.SandboxEnvironment;
+  ? new paypal.core.LiveEnvironment(
+      process.env.PAYPAL_CLIENT_ID,
+      process.env.PAYPAL_SECRET_KEY
+    )
+  : new paypal.core.SandboxEnvironment(
+      process.env.PAYPAL_CLIENT_ID,
+      process.env.PAYPAL_SECRET_KEY
+    );
 
-const paypalClient = new paypal.core.PayPalHttpClient(
-  new environment(
-    process.env.PAYPAL_CLIENT_ID,
-    process.env.PAYPAL_SECRET_KEY
-  )
-);
+const paypalClient = new paypal.core.PayPalHttpClient(environment);
 
 /**
  * Build a booking payment request that pays the owner directly and routes the
  * service fee to the platform. This does not hold funds in escrow.
  */
-const buildMultiPartyPaymentRequest = ({
+export const buildMultiPartyPaymentRequest = ({
   bookingId,
   referenceId,
   ownerId,
@@ -138,7 +141,7 @@ const buildMultiPartyPaymentRequest = ({
  * Create PayPal order for booking
  * Payee = owner's PayPal email; platform_fees = admin 10% service charge to admin email
  */
-const createPayPalOrder = async (paymentDetails) => {
+export const createPayPalOrder = async (paymentDetails) => {
   try {
     const { request, split } = buildMultiPartyPaymentRequest(paymentDetails);
     const response = await execPayPal(request);
@@ -159,7 +162,7 @@ const createPayPalOrder = async (paymentDetails) => {
 /**
  * Capture PayPal payment (after buyer approval)
  */
-const capturePayPalPayment = async (orderId) => {
+export const capturePayPalPayment = async (orderId) => {
   try {
     const request = new paypal.orders.OrdersCaptureRequest(orderId);
     const response = await execPayPal(request);
@@ -207,10 +210,10 @@ const capturePayPalPayment = async (orderId) => {
  * Admin (10% Opex fee) → admin wallet, completed immediately
  * Owner (net amount) → owner wallet, escrow held until rental completion
  */
-const processSplitPayment = async ({
+export const processSplitPayment = async ({
   bookingId,
   paypalTransactionId,
-      serviceChargeAmount,
+  serviceChargeAmount,
   ownerNetAmount,
   totalAmount,
   adminPaypalEmail,
@@ -286,10 +289,10 @@ const processSplitPayment = async ({
 };
 
 /**
- * Process Owner Membership (monthly Php 499 or yearly Php 4,999) â†’ Admin
+ * Process Owner Membership (monthly Php 499 or yearly Php 4,999) → Admin
  * Charged when owner subscribes. Payee = admin PayPal (gctravelandtours2021@gmail.com).
  */
-const processOwnerMembership = async ({ ownerId, billingCycle = 'yearly' }) => {
+export const processOwnerMembership = async ({ ownerId, billingCycle = 'yearly' }) => {
   const transaction = await Booking.sequelize.transaction();
   try {
     const owner = await User.findByPk(ownerId, { transaction });
@@ -355,7 +358,7 @@ const processOwnerMembership = async ({ ownerId, billingCycle = 'yearly' }) => {
 /**
  * Refund a booking payment via PayPal
  */
-const refundPayment = async ({ paypalTransactionId, amount, reason }) => {
+export const refundPayment = async ({ paypalTransactionId, amount, reason }) => {
   try {
     const request = new paypal.payments.RefundCaptureRequest(paypalTransactionId);
     request.requestBody({
@@ -384,7 +387,7 @@ const refundPayment = async ({ paypalTransactionId, amount, reason }) => {
  * Create a PayPal order for an e-wallet top-up.
  * Credited only after capturePayPalPayment succeeds, so funds can never be minted client-side.
  */
-const createTopupOrder = async ({ userId, amount, currency = 'PHP', returnUrl, cancelUrl }) => {
+export const createTopupOrder = async ({ userId, amount, currency = 'PHP', returnUrl, cancelUrl }) => {
   try {
     const value = Number(amount);
     if (!Number.isFinite(value) || value <= 0) throw new Error('Invalid top-up amount');
@@ -455,7 +458,7 @@ const createTopupOrder = async ({ userId, amount, currency = 'PHP', returnUrl, c
 /**
  * Fetch a PayPal order for reconciliation (status and captured amounts).
  */
-const getOrder = async (orderId) => {
+export const getOrder = async (orderId) => {
   try {
     const request = new paypal.orders.OrdersGetRequest(orderId);
     const response = await execPayPal(request);
@@ -486,7 +489,7 @@ const getOrder = async (orderId) => {
   }
 };
 
-const verifyPayPalWebhook = async (headers, event) => {
+export const verifyPayPalWebhook = async (headers, event) => {
   assertPayPalRuntimeAllowed();
   const webhookId = process.env.PAYPAL_WEBHOOK_ID;
   const clientId = process.env.PAYPAL_CLIENT_ID;
@@ -526,32 +529,3 @@ const verifyPayPalWebhook = async (headers, event) => {
     throw new Error(`PayPal OAuth request failed with status ${tokenResponse.status}`);
   }
   const tokenData = await tokenResponse.json();
-  if (!tokenData.access_token) throw new Error('PayPal OAuth response did not include an access token');
-
-  const verifyResponse = await fetch(`${apiBase}/v1/notifications/verify-webhook-signature`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${tokenData.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(verification),
-    signal: AbortSignal.timeout(PAYPAL_TIMEOUT_MS),
-  });
-  if (!verifyResponse.ok) {
-    throw new Error(`PayPal webhook verification failed with status ${verifyResponse.status}`);
-  }
-  const verifyData = await verifyResponse.json();
-  return verifyData.verification_status === 'SUCCESS';
-};
-
-module.exports = {
-  buildMultiPartyPaymentRequest,
-  createPayPalOrder,
-  capturePayPalPayment,
-  createTopupOrder,
-  getOrder,
-  verifyPayPalWebhook,
-  processSplitPayment,
-  processOwnerMembership,
-  refundPayment
-};

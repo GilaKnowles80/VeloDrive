@@ -1,18 +1,14 @@
-'use strict';
+import { sequelize } from '../config/database.js';
 
-const fs = require('fs');
-const path = require('path');
-const { sequelize } = require('../config/database');
-
-const User = require('./User');
-const Vehicle = require('./Vehicle');
-const Booking = require('./Booking');
-const Transaction = require('./Transaction');
-const Wallet = require('./Wallet');
-const GDPRConsent = require('./GDPRConsent');
-const Document = require('./Document');
-const GPSLocation = require('./GPSLocation');
-const RefreshToken = require('./RefreshToken');
+import User from './User.js';
+import Vehicle from './Vehicle.js';
+import Booking from './Booking.js';
+import Transaction from './Transaction.js';
+import Wallet from './Wallet.js';
+import GDPRConsent from './GDPRConsent.js';
+import Document from './Document.js';
+import GPSLocation from './GPSLocation.js';
+import RefreshToken from './RefreshToken.js';
 
 // Associations
 User.hasMany(Vehicle, { foreignKey: 'ownerId', as: 'vehicles', onDelete: 'CASCADE' });
@@ -63,7 +59,20 @@ const db = {
   GDPRConsent,
   Document,
   GPSLocation,
-  RefreshToken
+  RefreshToken,
 };
 
-module.exports = db;
+export {
+  sequelize,
+  User,
+  Vehicle,
+  Booking,
+  Transaction,
+  Wallet,
+  GDPRConsent,
+  Document,
+  GPSLocation,
+  RefreshToken,
+};
+
+export default db;

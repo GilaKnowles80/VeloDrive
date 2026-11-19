@@ -1,6 +1,8 @@
-const { Transaction, User, Booking, Wallet } = require('../models');
-const { sequelize } = require('../config/database');
-const { creditWallet, debitWallet } = require('./walletService');
+import db from '../models/index.js';
+import { sequelize } from '../config/database.js';
+import { creditWallet, debitWallet } from './walletService.js';
+
+const { Transaction, User, Booking, Wallet } = db;
 
 /**
  * Booking escrow lifecycle.
@@ -19,7 +21,7 @@ const loadBooking = (bookingId, transaction) =>
  * Mark captured funds as held and credit the platform service charge.
  * Idempotent: re-running on a booking already in escrow is a no-op.
  */
-const processBookingEscrow = async (bookingId) => {
+export const processBookingEscrow = async (bookingId) => {
   const transaction = await sequelize.transaction();
   try {
     const booking = await loadBooking(bookingId, transaction);
@@ -60,16 +62,15 @@ const processBookingEscrow = async (bookingId) => {
 /**
  * Release the held owner payout once the rental is completed.
  */
-const releaseEscrowToOwner = async (bookingId) => {
+export const releaseEscrowToOwner = async (bookingId) => {
   const transaction = await sequelize.transaction();
   try {
     const booking = await loadBooking(bookingId, transaction);
     if (!booking) throw new Error('Booking not found');
     if (booking.escrowStatus === 'released') {
       await transaction.commit();
-      return { success: true, booking, alreadyReleased: true };
-    }
-    if (booking.escrowStatus !== 'held') {
+      return { success: true, booking, alreadyReleased: true }; 
+    }if (booking.escrowStatus !== 'held') {
       throw new Error('Escrow is not held for this booking');
     }
 
@@ -102,7 +103,7 @@ const releaseEscrowToOwner = async (bookingId) => {
  * Refund a booking into the renter's e-wallet.
  * Unpaid bookings are simply cancelled — nothing is ever credited for missing funds.
  */
-const refundBooking = async (bookingId, reason) => {
+export const refundBooking = async (bookingId, reason) => {
   const transaction = await sequelize.transaction();
   try {
     const booking = await loadBooking(bookingId, transaction);
@@ -161,7 +162,7 @@ const refundBooking = async (bookingId, reason) => {
  * Charge the renter for fuel/damage/delay after a rental.
  * Debits the wallet when funded, otherwise records a pending charge for the admin.
  */
-const chargeRenterExtras = async (booking, extraTotal) => {
+export const chargeRenterExtras = async (booking, extraTotal) => {
   if (!(extraTotal > 0)) return { charged: false, pending: false };
 
   const transaction = await sequelize.transaction();
@@ -205,7 +206,7 @@ const chargeRenterExtras = async (booking, extraTotal) => {
   }
 };
 
-module.exports = {
+export default {
   processBookingEscrow,
   releaseEscrowToOwner,
   refundBooking,

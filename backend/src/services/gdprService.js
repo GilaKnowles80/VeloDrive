@@ -1,12 +1,14 @@
-const { User, Booking, Vehicle, Transaction, Document, Wallet, GDPRConsent } = require('../models');
-const { sequelize } = require('../config/database');
+import db from '../models/index.js';
+import { sequelize } from '../config/database.js';
+
+const { User, Booking, Vehicle, Transaction, Document, Wallet, GDPRConsent } = db;
 
 const REDACTED = '[erased]';
 
 /**
  * Export all user data (GDPR Right to Access / Data Portability).
  */
-const exportUserData = async (userId) => {
+export const exportUserData = async (userId) => {
   const user = await User.findByPk(userId, { attributes: { exclude: ['password', 'otpCode'] } });
   if (!user) throw new Error('User not found');
 
@@ -39,7 +41,7 @@ const exportUserData = async (userId) => {
  * deleted. That keeps `dataDeletedAt` meaningful for the login gate and avoids
  * orphaning foreign keys.
  */
-const eraseUserData = async (userId) => {
+export const eraseUserData = async (userId) => {
   const user = await User.findByPk(userId);
   if (!user) throw new Error('User not found');
 
@@ -91,7 +93,7 @@ const eraseUserData = async (userId) => {
 /**
  * Withdraw a previously granted consent type.
  */
-const withdrawConsent = async (userId, consentType) => {
+export const withdrawConsent = async (userId, consentType) => {
   if (!consentType) throw new Error('consentType is required');
 
   const consent = await GDPRConsent.findOne({ where: { userId, consentType } });
@@ -107,7 +109,7 @@ const withdrawConsent = async (userId, consentType) => {
 /**
  * Record a consent decision (used on registration and policy re-acceptance).
  */
-const logConsent = async ({ userId, consentType, isGranted, req, version = '1.0' }) => {
+export const logConsent = async ({ userId, consentType, isGranted, req, version = '1.0' }) => {
   const existing = await GDPRConsent.findOne({ where: { userId, consentType } });
 
   if (existing) {
@@ -131,4 +133,9 @@ const logConsent = async ({ userId, consentType, isGranted, req, version = '1.0'
   });
 };
 
-module.exports = { exportUserData, eraseUserData, withdrawConsent, logConsent };
+export default {
+  exportUserData,
+  eraseUserData,
+  withdrawConsent,
+  logConsent,
+};

@@ -1,16 +1,18 @@
-const { Booking, Vehicle } = require('../models');
-const {
+import db from '../models/index.js';
+import {
   releaseEscrowToOwner,
   refundBooking,
   chargeRenterExtras,
-} = require('../services/paymentService');
+} from '../services/paymentService.js';
+
+const { Booking, Vehicle } = db;
 
 const findBooking = async (id) => Booking.findByPk(id);
 
 const denyUnlessOwnerOrAdmin = (booking, user) =>
   booking.ownerId === user.id || user.role === 'admin';
 
-const confirmBooking = async (req, res) => {
+export const confirmBooking = async (req, res) => {
   try {
     const booking = await findBooking(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -30,7 +32,7 @@ const confirmBooking = async (req, res) => {
   }
 };
 
-const startRental = async (req, res) => {
+export const startRental = async (req, res) => {
   try {
     const booking = await findBooking(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -64,7 +66,7 @@ const toCharge = (value) => {
   return Number.isFinite(amount) && amount > 0 ? Number(amount.toFixed(2)) : 0;
 };
 
-const completeRental = async (req, res) => {
+export const completeRental = async (req, res) => {
   try {
     const booking = await findBooking(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -114,47 +116,4 @@ const completeRental = async (req, res) => {
     res.json({
       success: true,
       message: chargeResult.pending
-        ? 'Rental completed. Extra charges exceed the renter wallet balance and were recorded as outstanding.'
-        : 'Rental completed',
-      booking: escrowResult.booking || booking,
-      extraCharges: { total: extraTotal, ...chargeResult },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-const cancelBooking = async (req, res) => {
-  try {
-    const booking = await findBooking(req.params.id);
-    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-    if (booking.renterId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
-    }
-    if (['cancelled', 'completed'].includes(booking.status)) {
-      return res.status(409).json({ success: false, message: `Booking is already ${booking.status}` });
-    }
-
-    const reason = req.user.role === 'admin' ? 'Cancelled by admin' : 'Cancelled by renter';
-    const result = await refundBooking(booking.id, reason);
-
-    // Return vehicle to active and available on cancellation
-    await Vehicle.update(
-      { status: 'active', isAvailable: true },
-      { where: { id: booking.vehicleId } }
-    );
-
-    res.json({
-      success: true,
-      message: result.refunded
-        ? 'Booking cancelled and refunded to your wallet'
-        : 'Booking cancelled. No payment had been captured.',
-      booking: result.booking,
-      refunded: Boolean(result.refunded),
-    });
-  } catch (error) {
-    res.status(409).json({ success: false, message: error.message });
-  }
-};
-
-module.exports = { confirmBooking, startRental, completeRental, cancelBooking };
+        ? '

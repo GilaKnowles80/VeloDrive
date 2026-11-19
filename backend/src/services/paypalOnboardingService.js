@@ -1,5 +1,3 @@
-'use strict';
-
 const PAYPAL_TIMEOUT_MS = Number(process.env.PAYPAL_TIMEOUT_MS || 20000);
 
 const paypalApiBase = () =>
@@ -7,7 +5,7 @@ const paypalApiBase = () =>
     ? 'https://api-m.paypal.com'
     : 'https://api-m.sandbox.paypal.com';
 
-const getPayPalAccessToken = async () => {
+export const getPayPalAccessToken = async () => {
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const secret = process.env.PAYPAL_SECRET_KEY;
   if (!clientId || !secret) {
@@ -50,7 +48,7 @@ const getPayPalAccessToken = async () => {
  * @param {string} params.businessName - Owner's legal business name
  * @returns {Promise<{ onboardingUrl: string, trackingId: string }>}
  */
-const generatePartnerOnboardingLink = async ({ ownerEmail, businessName }) => {
+export const generatePartnerOnboardingLink = async ({ ownerEmail, businessName }) => {
   if (!ownerEmail || !businessName) {
     throw new Error('ownerEmail and businessName are required');
   }
@@ -145,7 +143,7 @@ const generatePartnerOnboardingLink = async ({ ownerEmail, businessName }) => {
  * @param {string} trackingId - The tracking ID returned from generatePartnerOnboardingLink
  * @returns {Promise<{ partnerCustomerId: string | null, status: string }>}
  */
-const getPartnerReferral = async (trackingId) => {
+export const getPartnerReferral = async (trackingId) => {
   if (!trackingId) {
     throw new Error('trackingId is required');
   }
@@ -192,4 +190,8 @@ const getPartnerReferral = async (trackingId) => {
   return { partnerCustomerId, status };
 };
 
-module.exports = { generatePartnerOnboardingLink, getPayPalAccessToken, getPartnerReferral };
+export default {
+  generatePartnerOnboardingLink,
+  getPayPalAccessToken,
+  getPartnerReferral,
+};

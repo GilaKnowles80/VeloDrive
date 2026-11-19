@@ -1,7 +1,11 @@
-const { createPayment, capturePayment, savePaymentAccount, getPaymentAccount } = require('../services/paymentGatewayService');
-const { protect } = require('../middleware/auth');
+import {
+  createPayment,
+  capturePayment,
+  savePaymentAccount,
+  getPaymentAccount,
+} from '../services/paymentGatewayService.js';
 
-const createPaymentHandler = async (req, res) => {
+export const createPaymentHandler = async (req, res) => {
   try {
     const { amount, paymentMethod, returnUrl, cancelUrl } = req.body;
     const result = await createPayment({
@@ -21,7 +25,7 @@ const createPaymentHandler = async (req, res) => {
   }
 };
 
-const capturePaymentHandler = async (req, res) => {
+export const capturePaymentHandler = async (req, res) => {
   try {
     const { paymentMethod, referenceId, confirmCode } = req.body;
     const result = await capturePayment({
@@ -39,7 +43,7 @@ const capturePaymentHandler = async (req, res) => {
   }
 };
 
-const savePaymentAccountHandler = async (req, res) => {
+export const savePaymentAccountHandler = async (req, res) => {
   try {
     const { bankAccountName, bankAccountNumber, bankName, gcashNumber, paymentPreference, paypalEmail } = req.body;
     const result = await savePaymentAccount({
@@ -60,7 +64,7 @@ const savePaymentAccountHandler = async (req, res) => {
   }
 };
 
-const getPaymentAccountHandler = async (req, res) => {
+export const getPaymentAccountHandler = async (req, res) => {
   try {
     const result = await getPaymentAccount(req.user.id);
     if (!result.success) {
@@ -72,9 +76,7 @@ const getPaymentAccountHandler = async (req, res) => {
   }
 };
 
-module.exports = {
+export default {
   createPaymentHandler,
   capturePaymentHandler,
   savePaymentAccountHandler,
-  getPaymentAccountHandler,
-};

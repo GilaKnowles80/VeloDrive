@@ -1,12 +1,14 @@
-'use strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const fs = require('fs');
-const path = require('path');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const FOLDER_DIR = __dirname;
 const RETENTION_MS = 60 * 24 * 60 * 60 * 1000; // 60 days (2 months)
 
-const getDocumentMonitoringList = () => {
+export const getDocumentMonitoringList = () => {
   const now = Date.now();
   const files = fs.readdirSync(FOLDER_DIR);
   const activeDocuments = [];
@@ -37,4 +39,6 @@ const getDocumentMonitoringList = () => {
   return activeDocuments.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
 };
 
-module.exports = { getDocumentMonitoringList };
+export default {
+  getDocumentMonitoringList,
+};

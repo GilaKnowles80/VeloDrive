@@ -1,5 +1,7 @@
-const { Wallet, Transaction } = require('../models');
-const { sequelize } = require('../config/database');
+import db from '../models/index.js';
+import { sequelize } from '../config/database.js';
+
+const { Wallet, Transaction } = db;
 
 /**
  * Wallet ledger primitives.
@@ -16,7 +18,7 @@ const toAmount = (value) => {
 const buildReference = () =>
   `TXN-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
 
-const getOrCreateWallet = async (userId, transaction = null) => {
+export const getOrCreateWallet = async (userId, transaction = null) => {
   let wallet = await Wallet.findOne({ where: { userId }, transaction });
   if (!wallet) {
     wallet = await Wallet.create({ userId, balance: 0.0 }, { transaction });
@@ -28,7 +30,7 @@ const getOrCreateWallet = async (userId, transaction = null) => {
  * Apply a signed delta to a wallet balance.
  * Pass `transaction` to join a caller's DB transaction (prevents partial writes).
  */
-const applyDelta = async ({
+export const applyDelta = async ({
   userId,
   delta,
   type,
@@ -77,7 +79,7 @@ const applyDelta = async ({
   }
 };
 
-const creditWallet = (userId, amount, type, description, options = {}) =>
+export const creditWallet = (userId, amount, type, description, options = {}) =>
   applyDelta({
     userId,
     delta: toAmount(amount),
@@ -86,7 +88,7 @@ const creditWallet = (userId, amount, type, description, options = {}) =>
     ...options,
   });
 
-const debitWallet = (userId, amount, type, description, options = {}) =>
+export const debitWallet = (userId, amount, type, description, options = {}) =>
   applyDelta({
     userId,
     delta: -toAmount(amount),
@@ -95,4 +97,9 @@ const debitWallet = (userId, amount, type, description, options = {}) =>
     ...options,
   });
 
-module.exports = { creditWallet, debitWallet, getOrCreateWallet, applyDelta };
+export default {
+  creditWallet,
+  debitWallet,
+  getOrCreateWallet,
+  applyDelta,
+};

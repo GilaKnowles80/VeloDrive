@@ -1,9 +1,7 @@
-'use strict';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/database.js';
 
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
-
-const GPSLocation = sequelize.define('GPSLocation', {
+export const GPSLocation = sequelize.define('GPSLocation', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
@@ -53,4 +51,4 @@ const GPSLocation = sequelize.define('GPSLocation', {
   ]
 });
 
-module.exports = GPSLocation;
+export default GPSLocation;

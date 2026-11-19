@@ -1,7 +1,5 @@
-'use strict';
-
-const { GetObjectCommand, S3Client } = require('@aws-sdk/client-s3');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const S3_REFERENCE_PREFIX = 's3://';
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
@@ -17,15 +15,15 @@ if (hasS3Settings && (!bucket || !accessKeyId || !secretAccessKey)) {
   throw new Error('S3_BUCKET_NAME, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY must be configured together');
 }
 
-const useS3 = Boolean(bucket && accessKeyId && secretAccessKey);
-const s3Client = useS3
+export const useS3 = Boolean(bucket && accessKeyId && secretAccessKey);
+export const s3Client = useS3
   ? new S3Client({
       region: process.env.S3_REGION || 'us-east-1',
       credentials: { accessKeyId, secretAccessKey },
     })
   : null;
 
-const fileToStorageValue = (file) => {
+export const fileToStorageValue = (file) => {
   if (!file) return null;
   if (file.key) return `${S3_REFERENCE_PREFIX}${file.key}`;
   if (!file.buffer) throw new Error('Uploaded file has no S3 key or in-memory buffer');
@@ -34,7 +32,7 @@ const fileToStorageValue = (file) => {
   return `data:${mime};base64,${file.buffer.toString('base64')}`;
 };
 
-const signStorageValue = async (value) => {
+export const signStorageValue = async (value) => {
   if (typeof value !== 'string' || !value.startsWith(S3_REFERENCE_PREFIX)) return value;
   if (!useS3) throw new Error('Cannot sign an S3 object URL because S3 is not configured');
 
@@ -48,7 +46,7 @@ const signStorageValue = async (value) => {
   );
 };
 
-const signArrayField = async (value) => {
+export const signArrayField = async (value) => {
   if (Array.isArray(value)) return Promise.all(value.map(signStorageValue));
   if (typeof value !== 'string') return value;
 
@@ -66,7 +64,7 @@ const signArrayField = async (value) => {
   return signStorageValue(value);
 };
 
-const serializeVehicle = async (vehicle, { includePrivate = false } = {}) => {
+export const serializeVehicle = async (vehicle, { includePrivate = false } = {}) => {
   const result = typeof vehicle.toJSON === 'function' ? vehicle.toJSON() : { ...vehicle };
 
   if (!includePrivate) {
@@ -85,13 +83,13 @@ const serializeVehicle = async (vehicle, { includePrivate = false } = {}) => {
   return result;
 };
 
-const serializeDocument = async (document) => {
+export const serializeDocument = async (document) => {
   const result = typeof document.toJSON === 'function' ? document.toJSON() : { ...document };
   result.filePath = await signStorageValue(result.filePath);
   return result;
 };
 
-module.exports = {
+export default {
   fileToStorageValue,
   serializeDocument,
   serializeVehicle,

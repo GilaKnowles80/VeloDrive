@@ -1,11 +1,12 @@
-'use strict';
+import 'dotenv/config';
+import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
+import { sequelize } from '../config/database.js';
+import db from '../models/index.js';
 
-require('dotenv').config();
-const bcrypt = require('bcryptjs');
-const { sequelize } = require('../config/database');
-const { User, Wallet } = require('../models');
+const { User, Wallet } = db;
 
-const seedAdmin = async () => {
+export const seedAdmin = async () => {
   const email = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD || '';
   const hasEmailProvider = Boolean(
@@ -63,7 +64,7 @@ const seedAdmin = async () => {
   });
 };
 
-if (require.main === module) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   seedAdmin()
     .catch((error) => {
       console.error('Admin provisioning failed:', error.message);
@@ -72,4 +73,4 @@ if (require.main === module) {
     .finally(() => sequelize.close());
 }
 
-module.exports = { seedAdmin };
+export default { seedAdmin };

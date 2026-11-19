@@ -1,10 +1,10 @@
-const { getOrCreateWallet, applyDelta, creditWallet, debitWallet } = require('./walletService');
-const {
+import { getOrCreateWallet, applyDelta, creditWallet, debitWallet } from './walletService.js';
+import {
   processBookingEscrow,
   releaseEscrowToOwner,
   refundBooking,
   chargeRenterExtras,
-} = require('./escrowService');
+} from './escrowService.js';
 
 /**
  * Pricing rules for a booking (marketplace split model):
@@ -12,9 +12,9 @@ const {
  *   admin keeps: 10% service charge fee
  *   owner receives: net vehicle owner's setup payment
  */
-const SERVICE_CHARGE_FEE = 10; // 10% service charge fee
+export const SERVICE_CHARGE_FEE = 10; // 10% service charge fee
 
-const calculateBookingAmounts = (basePrice, serviceChargeFlatFee = 0) => {
+export const calculateBookingAmounts = (basePrice, serviceChargeFlatFee = 0) => {
   const gross = Number(basePrice);
   if (!Number.isFinite(gross) || gross <= 0) throw new Error('Invalid booking amount');
 
@@ -26,7 +26,7 @@ const calculateBookingAmounts = (basePrice, serviceChargeFlatFee = 0) => {
   return { basePrice: gross, ownerNetAmount, serviceChargeFee, totalAmount, ownerPayout };
 };
 
-module.exports = {
+export default {
   SERVICE_CHARGE_FEE,
   calculateBookingAmounts,
   getOrCreateWallet,

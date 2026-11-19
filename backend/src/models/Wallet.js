@@ -1,9 +1,7 @@
-'use strict';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/database.js';
 
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
-
-const Wallet = sequelize.define('Wallet', {
+export const Wallet = sequelize.define('Wallet', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
@@ -45,4 +43,4 @@ const Wallet = sequelize.define('Wallet', {
   timestamps: true
 });
 
-module.exports = Wallet;
+export default Wallet;

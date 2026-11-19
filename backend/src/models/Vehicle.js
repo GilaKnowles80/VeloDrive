@@ -1,9 +1,7 @@
-'use strict';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/database.js';
 
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
-
-const Vehicle = sequelize.define('Vehicle', {
+export const Vehicle = sequelize.define('Vehicle', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
@@ -124,29 +122,3 @@ const Vehicle = sequelize.define('Vehicle', {
   lastGpsUpdate: {
     type: DataTypes.DATE,
     allowNull: true
-  },
-  isAvailable: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true
-  },
-  isVerified: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
-  },
-  status: {
-    type: DataTypes.ENUM('active', 'en-route', 'inactive', 'maintenance', 'suspended'),
-    defaultValue: 'active'
-  }
-}, {
-  tableName: 'vehicles',
-  timestamps: true,
-  indexes: [
-    { fields: ['ownerId'] },
-    { fields: ['type'] },
-    { fields: ['isAvailable'] },
-    { fields: ['isVerified'] },
-    { fields: ['status'] }
-  ]
-});
-
-module.exports = Vehicle;

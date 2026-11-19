@@ -1,10 +1,12 @@
-const { Op } = require('sequelize');
-const { User, Vehicle, Booking, Transaction, Wallet } = require('../models');
+import { Op } from 'sequelize';
+import db from '../models/index.js';
 
 // 60-Day Admin Inventory Monitoring Scripts
-const { getProfileMonitoringList } = require('../uploads/profile/profileInventory');
-const { getDocumentMonitoringList } = require('../uploads/documents/documentInventory');
-const { getVinTrackerList } = require('../uploads/ads/vinTrackerInventory');
+import { getProfileMonitoringList } from '../uploads/profile/profileInventory.js';
+import { getDocumentMonitoringList } from '../uploads/documents/documentInventory.js';
+import { getVinTrackerList } from '../uploads/ads/vinTrackerInventory.js';
+
+const { User, Vehicle, Booking, Transaction, Wallet } = db;
 
 const USER_ATTRS = ['id', 'firstName', 'lastName', 'email', 'phone', 'role', 'isActive', 'isEmailVerified', 'createdAt'];
 
@@ -16,7 +18,7 @@ const PLATFORM_MEMBERSHIP_FEE = {
   yearly: Number(process.env.PLATFORM_MEMBERSHIP_FEE) || 4999.00,
 };
 
-const getDashboardStats = async (req, res) => {
+export const getDashboardStats = async (req, res) => {
   try {
     const [totalUsers, totalOwners, totalRenters, totalVehicles, totalBookings, pendingVehicles] =
       await Promise.all([
@@ -60,7 +62,7 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-const getAllUsers = async (req, res) => {
+export const getAllUsers = async (req, res) => {
   try {
     const users = await User.findAll({
       attributes: { exclude: ['password', 'otpCode'] },
@@ -73,7 +75,7 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-const getAllVehicles = async (req, res) => {
+export const getAllVehicles = async (req, res) => {
   try {
     const where = {};
     if (req.query.status === 'pending') where.isVerified = false;
@@ -90,7 +92,7 @@ const getAllVehicles = async (req, res) => {
   }
 };
 
-const getAllBookings = async (req, res) => {
+export const getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.findAll({
       include: [
@@ -109,7 +111,7 @@ const getAllBookings = async (req, res) => {
 /**
  * Approve or revoke a listing. Body: { verified?: boolean } (defaults to true).
  */
-const verifyVehicle = async (req, res) => {
+export const verifyVehicle = async (req, res) => {
   try {
     const vehicle = await Vehicle.findByPk(req.params.id);
     if (!vehicle) return res.status(404).json({ success: false, message: 'Vehicle not found' });
@@ -122,150 +124,3 @@ const verifyVehicle = async (req, res) => {
       message: verified ? 'Vehicle approved and published' : 'Vehicle verification revoked',
       vehicle,
     });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-/**
- * Suspend or reactivate an account. Body: { isActive?: boolean } (defaults to false).
- */
-const suspendUser = async (req, res) => {
-  try {
-    const user = await User.findByPk(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    if (user.id === req.user.id) {
-      return res.status(400).json({ success: false, message: 'You cannot suspend your own admin account' });
-    }
-    if (user.role === 'admin' && req.body.isActive === false) {
-      return res.status(400).json({ success: false, message: 'Other admin accounts cannot be suspended here' });
-    }
-
-    const isActive = req.body.isActive === undefined ? false : Boolean(req.body.isActive);
-    await user.update({ isActive });
-
-    if (!isActive) {
-      await Transaction.sequelize.query('DELETE FROM refresh_tokens WHERE "userId" = :userId', {
-        replacements: { userId: user.id },
-      }).catch(() => {});
-    }
-
-    res.json({
-      success: true,
-      message: isActive ? 'Account reactivated' : 'Account suspended',
-      user: { id: user.id, email: user.email, isActive: user.isActive },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-const getAllTransactions = async (req, res) => {
-  try {
-    const transactions = await Transaction.findAll({
-      include: [{ model: User, attributes: ['id', 'firstName', 'lastName', 'email', 'role'] }],
-      order: [['createdAt', 'DESC']],
-      limit: 500,
-    });
-    res.json({ success: true, transactions });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-const exportTransactions = async (req, res) => {
-  try {
-    const transactions = await Transaction.findAll({
-      include: [{ model: User, attributes: ['id', 'firstName', 'lastName', 'email', 'role'] }],
-      order: [['createdAt', 'DESC']],
-      limit: 10000,
-    });
-
-    // Build CSV header
-    const headers = [
-      'Reference', 'Type', 'Status', 'Amount (PHP)', 'Currency',
-      'User ID', 'User Name', 'User Email', 'User Role',
-      'Booking ID', 'Description', 'Created At'
-    ];
-
-    const rows = transactions.map((t) => {
-      const u = t.User || {};
-      const createdAt = t.createdAt ? new Date(t.createdAt).toISOString() : '';
-      return [
-        t.reference || '',
-        t.type || '',
-        t.status || '',
-        t.amount || 0,
-        t.currency || 'PHP',
-        u.id || '',
-        `${u.firstName || ''} ${u.lastName || ''}`.trim(),
-        u.email || '',
-        u.role || '',
-        t.bookingId || '',
-        (t.description || '').replace(/"/g, '""'),
-        createdAt,
-      ];
-    });
-
-    // Escape fields that contain commas, quotes, or newlines
-    const escapeCell = (cell) => {
-      const s = String(cell == null ? '' : cell);
-      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-      return s;
-    };
-
-    const csvContent = [
-      headers.map(escapeCell).join(','),
-      ...rows.map((row) => row.map(escapeCell).join(',')),
-    ].join('\n');
-
-    const filename = `velodrive_transactions_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.csv`;
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Cache-Control', 'no-cache');
-    return res.send(csvContent);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-/**
- * Admin-only 60-day monitoring lists for Profiles, Documents, and VIN Tracker.
- */
-const getAdminInventory = (req, res) => {
-  try {
-    const profiles = getProfileMonitoringList();
-    const documents = getDocumentMonitoringList();
-    const vinTracker = getVinTrackerList();
-
-    res.json({
-      success: true,
-      retentionDays: 60,
-      counts: {
-        profiles: profiles.length,
-        documents: documents.length,
-        vinTracker: vinTracker.length,
-      },
-      inventory: {
-        profiles,
-        documents,
-        vinTracker,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-module.exports = {
-  getDashboardStats,
-  getAllUsers,
-  getAllVehicles,
-  getAllBookings,
-  verifyVehicle,
-  suspendUser,
-  getAllTransactions,
-  exportTransactions,
-  getAdminInventory,
-};
