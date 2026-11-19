@@ -209,12 +209,18 @@ const paymentWebhook = async (req, res) => {
           console.warn(JSON.stringify({ level: 'warn', msg: 'paypal_webhook_unmatched_capture', orderId: verified.orderId }));
         }
       }
-    } else if (eventType === 'PAYMENT.CAPTURE.DENIED') { console.warn(JSON.stringify({ Level: 'warn', msg: 'paypal_webhook_capture_denied', resourceId: resource?.id })); }
-     
-    
+    } else if (eventType === 'PAYMENT.CAPTURE.DENIED') {
+      console.warn(JSON.stringify({ level: 'warn', msg: 'paypal_webhook_capture_denied', resourceId: resource?.id }));
+    }
+
     res.json({ success: true, received: true });
   } catch (error) {
     console.error(JSON.stringify({ level: 'error', msg: 'paypal_webhook_error', error: error.message }));
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
-}
+};
+
+router.post('/paypal', verifyPayPalSignature, paymentWebhook);
+router.post('/payment', verifyPayPalSignature, paymentWebhook);
+
+export default router;
