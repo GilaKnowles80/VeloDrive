@@ -10,6 +10,8 @@ import { getEnvironmentReadiness } from './config/runtimeReadiness.js';
 import errorHandler from './middleware/errorHandler.js';
 import { requestId } from './middleware/requestId.js';
 import { apiLimiter } from './middleware/rateLimit.js';
+// Apply rate limiting to your API routes
+app.use('/api/', apiLimiter);
 
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
