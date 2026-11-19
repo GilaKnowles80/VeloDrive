@@ -1,0 +1,104 @@
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+const Checkout = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Retrieve the vehicle object passed from the grid
+  const vehicle = location.state?.vehicle;
+
+  // Fallback if someone navigates directly to /checkout without selecting a vehicle
+  if (!vehicle) {
+    return (
+      <div className="max-w-xl mx-auto py-20 text-center px-4">
+        <h2 className="text-xl font-bold text-slate-900 mb-2">No Vehicle Selected</h2>
+        <p className="text-slate-600 mb-6 text-sm">Please choose a vehicle from the category grid to proceed with your booking.</p>
+        <button 
+          onClick={() => navigate('/')} 
+          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition cursor-pointer"
+        >
+          Back to Home
+        </button>
+      </div>
+    );
+  }
+
+  // Handle PayPal checkout transaction creation and escrow redirect
+  const handlePayPalCheckout = async () => {
+    try {
+      const response = await fetch('/api/paypal/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          vehicleId: vehicle.id || vehicle._id || vehicle.vehicleId,
+          amount: vehicle.pricePerDay || vehicle.price
+        })
+      });
+      
+      const data = await response.json();
+      if (data.approvalUrl) {
+        window.location.href = data.approvalUrl; // Redirect to live PayPal Checkout
+      } else {
+        alert(data.message || 'Failed to initiate PayPal payment.');
+      }
+    } catch (err) {
+      console.error('PayPal checkout error:', err);
+      alert('An error occurred during checkout initialization.');
+    }
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-12">
+      <button 
+        onClick={() => navigate(-1)} 
+        className="text-sm font-semibold text-blue-600 hover:text-blue-800 mb-6 flex items-center gap-1 cursor-pointer"
+      >
+        ← Back to Listings
+      </button>
+
+      <h2 className="text-3xl font-black text-slate-900 mb-8">Complete Your Rental Checkout</h2>
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-6 mb-8">
+        <img 
+          src={vehicle.imageUrl || vehicle.adCampaignImage || "/placeholder.jpg"} 
+          alt={vehicle.title || vehicle.model} 
+          className="w-full md:w-72 h-48 object-cover rounded-xl border border-slate-100"
+        />
+        <div className="flex flex-col justify-between flex-grow">
+          <div>
+            <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full mb-2">
+              {vehicle.vehicleType}
+            </span>
+            <h3 className="font-bold text-xl text-slate-900">{vehicle.title || vehicle.model}</h3>
+            <p className="text-slate-600 text-sm mt-2 leading-relaxed">{vehicle.description}</p>
+          </div>
+          
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-slate-500 text-sm font-medium">Rental Rate</span>
+            <span className="text-2xl font-black text-blue-600">₱{vehicle.pricePerDay || vehicle.price} <span className="text-xs text-slate-400 font-normal">/ day</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-6 mb-8">
+        <h4 className="font-bold text-slate-900 mb-2 text-sm">Escrow & Payment Terms</h4>
+        <p className="text-xs text-slate-600 leading-relaxed">
+          The booking amount and service charge are calculated by VeloDrive. Payments are securely held in escrow via [PayPal](https://www.paypal.com/) with an automated split (90% to vehicle owner, 10% platform service fee commission) upon completion.
+        </p>
+      </div>
+
+      <button
+        onClick={handlePayPalCheckout}
+        className="w-full py-4 bg-[#0070ba] hover:bg-[#005ea6] text-white font-extrabold rounded-2xl transition shadow-lg flex items-center justify-center gap-2 cursor-pointer text-base"
+      >
+        Continue to Secure [PayPal](https://www.paypal.com/) Checkout
+      </button>
+    </div>
+  );
+};
+
+export default Checkout;

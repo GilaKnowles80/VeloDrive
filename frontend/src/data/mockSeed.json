@@ -1,0 +1,29 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "Sedan",
+      "description": "Comfortable daily drivers and city cars"
+    },
+    {
+      "id": 2,
+      "name": "SUV",
+      "description": "Spacious vehicles for family trips and rough terrain"
+    },
+    {
+      "id": 3,
+      "name": "Motorcycle",
+      "description": "Fast and fuel-efficient two-wheelers"
+    },
+    {
+      "id": 4,
+      "name": "Van",
+      "description": "Large capacity transport for groups or cargo"
+    }
+  ],
+  "defaultAdmin": {
+    "email": "gctravelandtours2021@gmail.com",
+    "role": "admin",
+    "name": "Gila Arayan Cain Knowles"
+  }
+}

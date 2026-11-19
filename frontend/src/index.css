@@ -1,0 +1,12 @@
+/* Leaflet map CSS */
+@import 'leaflet/dist/leaflet.css';
+@import "tailwindcss/preflight.css";
+
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
+  }
+}

@@ -1,0 +1,311 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import api from '../utils/api';
+import { Mail, Lock, User as UserIcon, KeyRound, Clock, Eye, EyeOff } from 'lucide-react';
+
+const OTP_EXPIRES_SEC = 10 * 60;
+
+const formatCountdown = (s) => {
+  const m = Math.floor(Math.max(0, s) / 60);
+  const sec = Math.max(0, s) % 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
+};
+
+// Poetic Rotating Tagline Component for VeloDrive
+const taglines = [
+  "VeloDrive: How far will you take me to my destination?",
+  "VeloDrive: What are the places and tourist spots destination will you take me?",
+  "VeloDrive: How long is the distance would be to get me into you?",
+  "VeloDrive: Tell me what will I do to be with you in a long and winding road that never ends?"
+];
+
+function VeloDriveTagline() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % taglines.length);
+    }, 5000); // Rotates every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="text-center my-3 px-2">
+      <p className="text-sm md:text-base font-medium text-blue-600 italic transition-all duration-700">
+        "{taglines[currentIndex]}"
+      </p>
+    </div>
+  );
+}
+
+const Login = () => {
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [otp, setOtp] = useState('');
+  const [needsVerify, setNeedsVerify] = useState(false);
+  const [isLoginOtp, setIsLoginOtp] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [otpExpiresIn, setOtpExpiresIn] = useState(0);
+  const [retryAfter, setRetryAfter] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (otpExpiresIn <= 0) return;
+    const t = setInterval(() => setOtpExpiresIn((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [otpExpiresIn]);
+
+  useEffect(() => {
+    if (retryAfter <= 0) return;
+    const t = setInterval(() => setRetryAfter((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [retryAfter]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      const response = await api.post('/auth/login', {
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+      });
+      const { user, tokens, otpRequired } = response.data;
+      if (otpRequired) {
+        setIsLoginOtp(true);
+        setNeedsVerify(true);
+        setOtpExpiresIn(OTP_EXPIRES_SEC);
+        setMessage(response.data?.message || 'An OTP code has been sent to your email.');
+        return;
+      }
+      login(user, tokens.accessToken, tokens.refreshToken);
+      if (user?.role === 'admin') navigate('/admin/dashboard');
+      else if (user?.role === 'owner') navigate('/owner/dashboard');
+      else navigate('/renter/dashboard');
+    } catch (err) {
+      const status = err.response?.status;
+      const data = err.response?.data;
+      const msg = (data && typeof data === 'object' && data.message) ? data.message
+        : (status === 404 || !err.response) ? 'Service unavailable. Please try again in a moment (backend API not reachable).'
+        : 'Login failed';
+      setError(msg);
+      if (data?.otpRequired) {
+        setIsLoginOtp(true);
+        setNeedsVerify(true);
+        setOtpExpiresIn(OTP_EXPIRES_SEC);
+      }
+      if (/verify|otp|verification/i.test(String(msg))) {
+        setNeedsVerify(true);
+        if (otpExpiresIn <= 0) setOtpExpiresIn(OTP_EXPIRES_SEC);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      const res = await api.post('/auth/verify-otp', {
+        email: formData.email.trim().toLowerCase(),
+        otp: otp.trim(),
+      });
+      const { user, tokens } = res.data;
+      if (user && tokens) {
+        login(user, tokens.accessToken, tokens.refreshToken);
+        if (user?.role === 'admin') navigate('/admin/dashboard');
+        else if (user?.role === 'owner') navigate('/owner/dashboard');
+        else navigate('/renter/dashboard');
+        return;
+      }
+      setMessage('Email verified. Please sign in.');
+      setNeedsVerify(false);
+      setIsLoginOtp(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'OTP verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyLoginOtp = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      const res = await api.post('/auth/login-verify-otp', {
+        email: formData.email.trim().toLowerCase(),
+        otp: otp.trim(),
+      });
+      const { user, tokens } = res.data;
+      login(user, tokens.accessToken, tokens.refreshToken);
+      if (user?.role === 'admin') navigate('/admin/dashboard');
+      else if (user?.role === 'owner') navigate('/owner/dashboard');
+      else navigate('/renter/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Sign-in OTP verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (retryAfter > 0) return;
+    setResending(true);
+    setError('');
+    setMessage('');
+    try {
+      const res = await api.post('/auth/resend-otp', { email: formData.email.trim().toLowerCase() });
+      setMessage(res.data?.message || 'A new verification code was sent. Code expires in 10 minutes.');
+      setNeedsVerify(true);
+      setOtpExpiresIn(OTP_EXPIRES_SEC);
+      setRetryAfter(0);
+    } catch (err) {
+      const data = err.response?.data || {};
+      setError(data.message || 'Could not resend code.');
+      if (err.response?.status === 429 && data.retryAfterSec) setRetryAfter(Number(data.retryAfterSec) || 0);
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
+
+  return (
+    <div className="auth-shell">
+      <div className="w-full max-w-md p-6 bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-white/20">
+        
+        {/* Poetic Journey Tagline */}
+        <VeloDriveTagline />
+
+        <div className="text-center mb-6">
+          <div className="bg-blue-600 p-3 rounded-lg inline-block mb-3">
+            <UserIcon className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
+          <p className="text-gray-600 text-sm">Sign in to your VeloDrive account (Admin, Vehicle Owner, or Renter)</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          {message && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg text-sm">
+              {message}
+            </div>
+          )}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Email Address</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <input
+                type="email"
+                name="email"
+                autoComplete="username email"
+                className="input-field pl-10"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                autoComplete="current-password"
+                className="input-field pl-10 pr-10"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <button
+            type="submit"
+            className="btn-primary w-full disabled:opacity-50"
+            disabled={loading}
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+          <p className="text-center text-sm text-gray-600 mt-2">
+            <Link to="/forgot-password" className="text-blue-600 hover:text-blue-500 font-medium">Forgot Password?</Link>
+          </p>
+        </form>
+
+        {needsVerify && (
+          <form onSubmit={isLoginOtp ? handleVerifyLoginOtp : handleVerifyOtp} className="mt-4 space-y-3 border-t border-gray-200 pt-4">
+            <p className="text-sm text-gray-700 font-medium">
+              {isLoginOtp ? 'Two-Step Sign-In Verification' : 'Verify your email to continue'}
+            </p>
+            <div className="rounded-lg bg-sky-50 border border-sky-100 px-3 py-2 text-xs text-sky-800 space-y-1">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span>Code expires in <strong>{otpExpiresIn > 0 ? formatCountdown(otpExpiresIn) : '0:00'}</strong> (10 minutes). Use the latest code.</span>
+              </div>
+              <div>Resend limit: <strong>max 3 codes per 10 minutes</strong>.{retryAfter > 0 ? ` Try again in ${formatCountdown(retryAfter)}.` : ''}</div>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">6-Digit OTP Code</label>
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  name="otp"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  className="input-field pl-10 tracking-widest"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  required
+                />
+              </div>
+            </div>
+            <button type="submit" className="btn-primary w-full disabled:opacity-50" disabled={loading || otp.length < 6}>
+              {loading ? 'Verifying...' : isLoginOtp ? 'Complete Sign In' : 'Verify Email'}
+            </button>
+            <button type="button" onClick={handleResendOtp} disabled={resending || retryAfter > 0} className="w-full text-sm text-blue-600 font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
+              {resending ? 'Sending...' : retryAfter > 0 ? `Send available in ${formatCountdown(retryAfter)}` : 'Send code'}
+            </button>
+          </form>
+        )}
+
+        <p className="mt-6 text-center text-sm text-gray-600">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-blue-600 hover:text-blue-500 font-medium">
+            Create an account
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
