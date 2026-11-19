@@ -37,4 +37,4 @@ const apiLimiter = rateLimit({
   message: undefined,
 });
 
-module.exports = { authLimiter, authSensitiveLimiter, apiLimiter };
+exports = { authLimiter, authSensitiveLimiter, apiLimiter };
