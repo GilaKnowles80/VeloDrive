@@ -1,4 +1,9 @@
-import { getOrCreateWallet, applyDelta, creditWallet, debitWallet } from './walletService.js';
+import {
+  getOrCreateWallet,
+  applyDelta,
+  creditWallet,
+  debitWallet,
+} from './walletService.js';
 import {
   processBookingEscrow,
   releaseEscrowToOwner,
@@ -24,6 +29,17 @@ export const calculateBookingAmounts = (basePrice, serviceChargeFlatFee = 0) => 
   const ownerPayout = ownerNetAmount;
 
   return { basePrice: gross, ownerNetAmount, serviceChargeFee, totalAmount, ownerPayout };
+};
+
+export {
+  getOrCreateWallet,
+  applyDelta,
+  creditWallet,
+  debitWallet,
+  processBookingEscrow,
+  releaseEscrowToOwner,
+  refundBooking,
+  chargeRenterExtras,
 };
 
 export default {

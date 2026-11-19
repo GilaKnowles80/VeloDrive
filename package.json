@@ -12,5 +12,8 @@
     "dev:frontend": "npm --prefix velodrive-app/frontend run dev",
     "migrate": "npm --prefix velodrive-app/backend run migrate",
     "seed": "npm --prefix velodrive-app/backend run seed"
+  },
+  "dependencies": {
+    "nodemailer": "^10.6.0"
   }
 }
