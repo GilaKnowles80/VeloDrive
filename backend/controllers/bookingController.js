@@ -1,8 +1,9 @@
 import { Op } from 'sequelize';
 import db from '../models/index.js';
-const { Booking, Vehicle, User, Transaction } = db;
 import { calculateBookingAmounts } from '../services/paymentService.js';
 import { createPayPalOrder } from '../services/paypalService.js';
+
+const { Booking, Vehicle, User, Transaction } = db;
 
 const USER_ATTRS = ['id', 'firstName', 'lastName', 'email', 'phone', 'role'];
 const ACTIVE_STATUSES = ['pending', 'confirmed', 'active'];
